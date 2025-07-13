@@ -36,3 +36,11 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Async utilities
 futures = "0.3"
+
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockall = "0.12"
+tempfile = "3.10"
+serial_test = "3.0"

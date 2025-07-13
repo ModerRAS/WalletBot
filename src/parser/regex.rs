@@ -13,7 +13,7 @@ impl RegexPatterns {
     pub fn new() -> Self {
         Self {
             // 匹配钱包名称 #钱包名称 #月份 #年份
-            wallet_regex: Regex::new(r"#([^#\s]+)(?=\s+#\d+月)").unwrap(),
+            wallet_regex: Regex::new(r"#([^#\s]+)\s+#\d+月").unwrap(),
             // 匹配交易类型 #出账 或 #入账
             transaction_regex: Regex::new(r"#(出账|入账)").unwrap(),
             // 匹配金额 数字.数字元

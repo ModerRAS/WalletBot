@@ -1,0 +1,36 @@
+# WalletBot Configuration Example
+# Copy this file to .env and update with your actual values
+
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+# Get your bot token from @BotFather on Telegram
+
+# Database Configuration
+DATABASE_URL=wallet_bot.db
+# SQLite database file path
+
+# Logging Configuration
+RUST_LOG=info
+# Log levels: error, warn, info, debug, trace
+
+# Bot Configuration
+BOT_NAME=WalletBot
+# Bot display name
+
+# Channel Configuration (Optional)
+# TARGET_CHANNEL_ID=-1001234567890
+# Specific channel ID to monitor (leave empty to monitor all channels)
+
+# Processing Configuration
+MAX_RETRY_ATTEMPTS=3
+# Maximum number of retry attempts for failed operations
+
+PROCESSING_TIMEOUT=30
+# Timeout in seconds for message processing
+
+# Backup Configuration
+BACKUP_INTERVAL=3600
+# Backup interval in seconds (3600 = 1 hour)
+
+BACKUP_RETENTION_DAYS=7
+# Number of days to retain backup files 

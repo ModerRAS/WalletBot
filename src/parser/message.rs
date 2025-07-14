@@ -2,7 +2,7 @@ use crate::database::models::ParsedMessage;
 use crate::parser::regex::RegexPatterns;
 use log::{debug, warn};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageParser {
     patterns: &'static RegexPatterns,
 }
@@ -97,10 +97,43 @@ impl MessageParser {
 
     /// 检查消息是否符合钱包操作格式
     pub fn is_wallet_message(&self, text: &str) -> bool {
-        self.patterns.wallet_regex.is_match(text) &&
+        self.patterns.wallet_regex.is_match(text) && 
         self.patterns.transaction_regex.is_match(text) &&
-        self.patterns.amount_regex.is_match(text) &&
-        self.patterns.time_regex.is_match(text)
+        self.patterns.amount_regex.is_match(text)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Transaction {
+    pub transaction_type: String,
+    pub amount: f64,
+    pub description: String,
+}
+
+impl MessageParser {
+    pub fn parse_transaction(&self, text: &str) -> Result<Transaction, anyhow::Error> {
+        // 简化的交易解析，适用于"收入 100 工作收入"这样的格式
+        let parts: Vec<&str> = text.trim().split_whitespace().collect();
+        
+        if parts.len() < 3 {
+            return Err(anyhow::Error::msg("Invalid transaction format"));
+        }
+        
+        let transaction_type = parts[0].to_string();
+        let amount = parts[1].parse::<f64>()
+            .map_err(|_| anyhow::Error::msg("Invalid amount"))?;
+        let description = parts[2..].join(" ");
+        
+        // 验证交易类型
+        if transaction_type != "收入" && transaction_type != "支出" {
+            return Err(anyhow::Error::msg("Invalid transaction type"));
+        }
+        
+        Ok(Transaction {
+            transaction_type,
+            amount,
+            description,
+        })
     }
 }
 

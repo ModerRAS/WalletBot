@@ -4,6 +4,7 @@ use log::{debug, info, warn};
 use anyhow::Result;
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct BalanceCalculator {
     db: DatabaseOperations,
 }

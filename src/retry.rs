@@ -146,7 +146,7 @@ mod tests {
             Err(WalletBotError::parser_error("Non-retryable error"))
         };
         
-        let result = retry_with_backoff(
+        let result: Result<()> = retry_with_backoff(
             operation,
             RetryConfig::default(),
             "test_operation",

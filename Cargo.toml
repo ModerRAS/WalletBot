@@ -36,6 +36,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Async utilities
 futures = "0.3"
+async-trait = "0.1"
 
 
 [dev-dependencies]
@@ -44,3 +45,24 @@ tokio-test = "0.4"
 mockall = "0.12"
 tempfile = "3.10"
 serial_test = "3.0"
+wiremock = "0.6"
+httpmock = "0.7"
+rand = "0.8"
+cucumber = "0.21"
+
+# 为了能够在tests中使用项目的内部模块
+[lib]
+name = "walletbot"
+path = "src/lib.rs"
+
+[[bin]]
+name = "walletbot"
+path = "src/main.rs"
+
+[features]
+default = []
+testing = []
+
+[[test]]
+name = "cucumber_tests"
+harness = false

@@ -6,7 +6,7 @@ use crate::database::models::BalanceUpdateSource;
 use log::{debug, info, warn, error};
 use anyhow::Result;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageHandler {
     parser: MessageParser,
     calculator: BalanceCalculator,

@@ -4,9 +4,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use anyhow::Result;
 use log::{debug, info, error};
-use chrono::Utc;
+use chrono::{Utc, Datelike};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DatabaseOperations {
     conn: Arc<Mutex<Connection>>,
 }
@@ -192,17 +192,101 @@ impl DatabaseOperations {
 
     pub async fn is_message_processed(&self, message_id: i64, chat_id: i64) -> Result<bool> {
         let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare("SELECT id FROM messages WHERE message_id = ? AND chat_id = ?")?;
+        let rows: Vec<i64> = stmt.query_map(params![message_id, chat_id], |row| {
+            Ok(row.get(0)?)
+        })?.collect::<SqliteResult<Vec<i64>>>()?;
         
-        let mut stmt = conn.prepare("SELECT processed FROM messages WHERE message_id = ?1 AND chat_id = ?2")?;
-        let processed_iter = stmt.query_map(params![message_id, chat_id], |row| {
-            Ok(row.get::<_, bool>(0)?)
+        Ok(!rows.is_empty())
+    }
+
+    pub async fn get_transactions(&self, wallet_name: &str) -> Result<Vec<Transaction>> {
+        let conn = self.conn.lock().await;
+        let wallet = self.get_wallet_by_name_sync(&conn, wallet_name)?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT id, wallet_id, transaction_type, amount, month, year, message_id, chat_id, created_at 
+             FROM transactions 
+             WHERE wallet_id = ? 
+             ORDER BY created_at DESC"
+        )?;
+        
+        let rows = stmt.query_map(params![wallet.id], |row| {
+            Ok(Transaction {
+                id: Some(row.get(0)?),
+                wallet_id: row.get(1)?,
+                transaction_type: row.get(2)?,
+                amount: row.get(3)?,
+                month: row.get(4)?,
+                year: row.get(5)?,
+                message_id: row.get(6)?,
+                chat_id: row.get(7)?,
+                created_at: row.get(8)?,
+            })
         })?;
-
-        for processed in processed_iter {
-            return Ok(processed?);
+        
+        let mut transactions = Vec::new();
+        for row in rows {
+            transactions.push(row?);
         }
+        
+        Ok(transactions)
+    }
 
-        Ok(false)
+    pub async fn get_balance(&self, wallet_name: &str) -> Result<f64> {
+        let conn = self.conn.lock().await;
+        let wallet = self.get_wallet_by_name_sync(&conn, wallet_name)?;
+        Ok(wallet.current_balance)
+    }
+
+    pub async fn create_wallet(&self, name: &str) -> Result<Wallet> {
+        self.get_or_create_wallet(name).await
+    }
+
+    pub async fn wallet_exists(&self, name: &str) -> Result<bool> {
+        let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare("SELECT 1 FROM wallets WHERE name = ?1")?;
+        let exists = stmt.exists(params![name])?;
+        Ok(exists)
+    }
+
+    pub async fn add_transaction(
+        &self,
+        wallet_name: &str,
+        transaction_type: &str,
+        amount: f64,
+        description: &str,
+        transaction_id: &str,
+    ) -> Result<()> {
+        // 确保钱包存在
+        let _ = self.get_or_create_wallet(wallet_name).await?;
+        
+        // 对于简化的API，我们使用当前时间
+        let now = Utc::now();
+        let month = format!("{:02}", now.month());
+        let year = now.year().to_string();
+        
+        self.record_transaction(
+            wallet_name,
+            transaction_type,
+            amount,
+            &month,
+            &year,
+            None,
+            None,
+        ).await?;
+        
+        // 更新钱包余额
+        let current_balance = self.get_balance(wallet_name).await?;
+        let new_balance = if transaction_type == "收入" || transaction_type == "入账" {
+            current_balance + amount
+        } else {
+            current_balance - amount
+        };
+        
+        self.update_wallet_balance(wallet_name, new_balance).await?;
+        
+        Ok(())
     }
 
     fn get_wallet_by_name_sync(&self, conn: &Connection, name: &str) -> Result<Wallet> {

@@ -506,4 +506,104 @@ async fn test_concurrent_operations() -> Result<()> {
     
     println!("✅ 并发操作测试通过");
     Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_chat_wallet_isolation() -> Result<()> {
+    println!("🧪 测试多聊天环境下的钱包隔离");
+    
+    let temp_file = NamedTempFile::new()?;
+    let db_path = temp_file.path().to_str().unwrap();
+    let db = DatabaseOperations::new(db_path).await?;
+    
+    let chat_id_1 = 12345i64;
+    let chat_id_2 = 67890i64;
+    let wallet_name = "支付宝";
+    
+    // 在不同聊天中创建同名钱包
+    let wallet_1 = db.get_or_create_wallet(chat_id_1, wallet_name).await?;
+    let wallet_2 = db.get_or_create_wallet(chat_id_2, wallet_name).await?;
+    
+    // 钱包应该是不同的
+    assert_ne!(wallet_1.id, wallet_2.id);
+    assert_eq!(wallet_1.chat_id, chat_id_1);
+    assert_eq!(wallet_2.chat_id, chat_id_2);
+    
+    // 在不同聊天中添加不同余额
+    db.update_wallet_balance(chat_id_1, wallet_name, 100.0).await?;
+    db.update_wallet_balance(chat_id_2, wallet_name, 200.0).await?;
+    
+    // 验证余额隔离
+    let balance_1 = db.get_balance(chat_id_1, wallet_name).await?;
+    let balance_2 = db.get_balance(chat_id_2, wallet_name).await?;
+    
+    assert_eq!(balance_1, 100.0);
+    assert_eq!(balance_2, 200.0);
+    
+    // 在不同聊天中添加交易
+    db.record_transaction(chat_id_1, wallet_name, "入账", 50.0, "12", "2024", None).await?;
+    db.record_transaction(chat_id_2, wallet_name, "出账", 30.0, "12", "2024", None).await?;
+    
+    // 验证交易隔离
+    let transactions_1 = db.get_transactions(chat_id_1, wallet_name).await?;
+    let transactions_2 = db.get_transactions(chat_id_2, wallet_name).await?;
+    
+    assert_eq!(transactions_1.len(), 1);
+    assert_eq!(transactions_2.len(), 1);
+    assert_eq!(transactions_1[0].chat_id, Some(chat_id_1));
+    assert_eq!(transactions_2[0].chat_id, Some(chat_id_2));
+    
+    println!("✅ 多聊天环境钱包隔离测试通过");
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_same_wallet_different_chats() -> Result<()> {
+    println!("🧪 测试不同聊天环境下相同钱包名称的处理");
+    
+    let temp_file = NamedTempFile::new()?;
+    let db_path = temp_file.path().to_str().unwrap();
+    let db = DatabaseOperations::new(db_path).await?;
+    
+    let chat_ids = vec![11111i64, 22222i64, 33333i64];
+    let wallet_names = vec!["微信", "支付宝", "银行卡"];
+    
+    // 在每个聊天中创建所有类型的钱包
+    for chat_id in &chat_ids {
+        for wallet_name in &wallet_names {
+            let wallet = db.get_or_create_wallet(*chat_id, wallet_name).await?;
+            assert_eq!(wallet.chat_id, *chat_id);
+            assert_eq!(wallet.name, *wallet_name);
+            
+            // 设置不同的余额以区分
+            let initial_balance = (*chat_id as f64) / 1000.0; // 11.111, 22.222, 33.333
+            db.update_wallet_balance(*chat_id, wallet_name, initial_balance).await?;
+        }
+    }
+    
+    // 验证每个聊天中的钱包都是独立的
+    for chat_id in &chat_ids {
+        for wallet_name in &wallet_names {
+            let balance = db.get_balance(*chat_id, wallet_name).await?;
+            let expected_balance = (*chat_id as f64) / 1000.0;
+            assert_eq!(balance, expected_balance);
+            
+            // 验证钱包存在性
+            let exists = db.wallet_exists(*chat_id, wallet_name).await?;
+            assert!(exists);
+        }
+    }
+    
+    // 在不同聊天中操作同名钱包，验证互不干扰
+    db.add_transaction(chat_ids[0], "微信", "入账", 100.0, "测试交易", "tx1").await?;
+    db.add_transaction(chat_ids[1], "微信", "出账", 50.0, "测试交易", "tx2").await?;
+    
+    let balance_0 = db.get_balance(chat_ids[0], "微信").await?;
+    let balance_1 = db.get_balance(chat_ids[1], "微信").await?;
+    
+    // 余额应该不同，说明钱包确实是隔离的
+    assert_ne!(balance_0, balance_1);
+    
+    println!("✅ 不同聊天环境下相同钱包名称处理测试通过");
+    Ok(())
 } 

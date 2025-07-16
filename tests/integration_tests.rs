@@ -11,6 +11,9 @@ use walletbot::bot::handler::MessageHandler;
 use walletbot::bot::traits::BotApi;
 use walletbot::parser::message::MessageParser;
 
+// 测试用的常量
+const TEST_CHAT_ID: i64 = 12345;
+
 use teloxide::types::{
     Message, Chat, ChatId, MessageId, User, UserId, MessageKind, MessageCommon, 
     MediaKind, MediaText,
@@ -258,31 +261,31 @@ async fn test_database_operations() -> Result<()> {
     let db = create_test_db().await?;
     
     // 测试创建钱包
-    let wallet = db.get_or_create_wallet("测试钱包").await?;
+    let wallet = db.get_or_create_wallet(TEST_CHAT_ID, "测试钱包").await?;
     assert_eq!(wallet.name, "测试钱包");
     assert_eq!(wallet.current_balance, 0.0);
     
     // 测试更新余额
-    db.update_wallet_balance("测试钱包", 1000.0).await?;
-    let updated_wallet = db.get_or_create_wallet("测试钱包").await?;
+    db.update_wallet_balance(TEST_CHAT_ID, "测试钱包", 1000.0).await?;
+    let updated_wallet = db.get_or_create_wallet(TEST_CHAT_ID, "测试钱包").await?;
     assert_eq!(updated_wallet.current_balance, 1000.0);
     
     // 测试记录交易
     db.record_transaction(
+        TEST_CHAT_ID,
         "测试钱包",
         "出账",
         150.0,
         "12",
         "2024",
-        Some(123),
         Some(456),
     ).await?;
     
     // 测试记录消息处理状态
-    db.record_message(123, 456, "测试钱包", true, Some(1000.0), Some(850.0)).await?;
+    db.record_message(123, TEST_CHAT_ID, "测试钱包", true, Some(1000.0), Some(850.0)).await?;
     
     // 测试检查消息是否已处理
-    let is_processed = db.is_message_processed(123, 456).await?;
+    let is_processed = db.is_message_processed(123, TEST_CHAT_ID).await?;
     assert!(is_processed);
     
     println!("✅ 数据库操作测试通过");
@@ -296,7 +299,7 @@ async fn test_mock_bot_api() -> Result<()> {
     let mock_bot = MockBotApi::new();
     
     // 测试发送消息
-    let chat_id = ChatId(12345);
+    let chat_id = ChatId(TEST_CHAT_ID);
     let message_text = "测试消息";
     
     let result = mock_bot.send_message(chat_id, message_text).await;
@@ -370,17 +373,17 @@ async fn test_duplicate_message_handling() -> Result<()> {
     let db = create_test_db().await?;
     
     // 首先创建钱包
-    let _wallet = db.get_or_create_wallet("支付宝").await?;
+    let _wallet = db.get_or_create_wallet(TEST_CHAT_ID, "支付宝").await?;
     
     // 记录一条消息
-    db.record_message(123, 456, "支付宝", true, Some(1000.0), Some(850.0)).await?;
+    db.record_message(123, TEST_CHAT_ID, "支付宝", true, Some(1000.0), Some(850.0)).await?;
     
     // 检查是否已处理
-    let is_processed = db.is_message_processed(123, 456).await?;
+    let is_processed = db.is_message_processed(123, TEST_CHAT_ID).await?;
     assert!(is_processed);
     
     // 不同的消息ID应该返回false
-    let is_processed_different = db.is_message_processed(124, 456).await?;
+    let is_processed_different = db.is_message_processed(124, TEST_CHAT_ID).await?;
     assert!(!is_processed_different);
     
     println!("✅ 重复消息处理测试通过");
@@ -428,7 +431,7 @@ async fn test_complete_message_flow() -> Result<()> {
         assert_eq!(parsed.amount, amount);
         
         // 验证数据库操作
-        let wallet = db.get_or_create_wallet(wallet_name).await?;
+        let wallet = db.get_or_create_wallet(TEST_CHAT_ID, wallet_name).await?;
         println!("钱包 {} 当前余额: {}", wallet_name, wallet.current_balance);
     }
     
@@ -454,17 +457,17 @@ async fn test_performance() -> Result<()> {
     
     // 测试数据库性能
     // 首先创建钱包
-    let _wallet = db.get_or_create_wallet("性能测试钱包").await?;
+    let _wallet = db.get_or_create_wallet(TEST_CHAT_ID, "性能测试钱包").await?;
     
     let start_time = std::time::Instant::now();
     for i in 0..100 {
         db.record_transaction(
+            TEST_CHAT_ID,
             "性能测试钱包",
             "出账",
             100.0,
             "12",
             "2024",
-            Some(i),
             Some(12345),
         ).await?;
     }
@@ -491,7 +494,7 @@ async fn test_concurrent_operations() -> Result<()> {
         let db_clone = db.clone();
         let handle = tokio::spawn(async move {
             let wallet_name = format!("并发测试钱包{}", i);
-            db_clone.get_or_create_wallet(&wallet_name).await
+            db_clone.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await
         });
         handles.push(handle);
     }

@@ -117,7 +117,11 @@ mod tests {
                 *count += 1;
                 
                 if *count == 1 {
-                    Err(WalletBotError::parser_error("First attempt fails"))
+                    // 使用可重试的IO错误而不是不可重试的解析错误
+                    Err(WalletBotError::Io(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut, 
+                        "Temporary error"
+                    )))
                 } else {
                     Ok("success")
                 }

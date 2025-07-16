@@ -238,8 +238,8 @@ async fn test_message_parser() -> Result<()> {
     assert_eq!(parsed.wallet_name, "支付宝");
     assert_eq!(parsed.transaction_type, "出账");
     assert_eq!(parsed.amount, 150.0);
-    assert_eq!(parsed.month, "12");
-    assert_eq!(parsed.year, "2024");
+    assert_eq!(parsed.month, "12月");
+    assert_eq!(parsed.year, "2024年");
     
     // 测试非钱包消息
     let non_wallet_message = "这是一个普通消息";

@@ -404,6 +404,7 @@ async fn user_has_no_wallet(world: &mut WalletBotWorld, username: String) {
 #[when(expr = "我为用户 {string} 创建钱包")]
 async fn create_wallet_for_user(world: &mut WalletBotWorld, username: String) {
     world.current_user = username.clone();
+    world.current_wallet_name = Some(username.clone()); // 设置当前钱包名称
     let database = world.database.as_ref().unwrap();
     let result = database.create_wallet(TEST_CHAT_ID, &username).await;
     assert!(result.is_ok());
@@ -426,6 +427,7 @@ async fn initial_balance_should_be(world: &mut WalletBotWorld, expected_balance:
 #[given(expr = "用户 {string} 已经有钱包")]
 async fn user_has_wallet(world: &mut WalletBotWorld, username: String) {
     world.current_user = username.clone();
+    world.current_wallet_name = Some(username.clone()); // 设置当前钱包名称
     let database = world.database.as_ref().unwrap();
     let _ = database.create_wallet(TEST_CHAT_ID, &username).await;
 }
@@ -435,11 +437,11 @@ async fn record_income_transaction(world: &mut WalletBotWorld, amount: i32, desc
     let database = world.database.as_ref().unwrap();
     let result = database.add_transaction(
         TEST_CHAT_ID,
+        &world.current_user,
         "收入", 
-        &world.current_user, 
         amount as f64, 
-        &format!("tx_{}", rand::random::<u32>()),
-        &description
+        &description,
+        &format!("tx_{}", rand::random::<u32>())
     ).await;
     assert!(result.is_ok());
 }
@@ -447,8 +449,8 @@ async fn record_income_transaction(world: &mut WalletBotWorld, amount: i32, desc
 #[then(expr = "交易应该记录成功")]
 async fn transaction_should_be_recorded(world: &mut WalletBotWorld) {
     let database = world.database.as_ref().unwrap();
-    let default_wallet = "测试钱包".to_string();
-    let wallet_name = world.current_wallet_name.as_ref().unwrap_or(&default_wallet);
+    // 必须使用当前钱包名称，不使用默认值
+    let wallet_name = world.current_wallet_name.as_ref().expect("Current wallet name should be set");
     let transactions = database.get_transactions(TEST_CHAT_ID, wallet_name).await.unwrap();
     assert!(!transactions.is_empty());
 }
@@ -463,15 +465,16 @@ async fn wallet_balance_should_increase(world: &mut WalletBotWorld, amount: i32)
 #[given(expr = "用户 {string} 已经有钱包 余额为 {int}")]
 async fn user_has_wallet_with_balance(world: &mut WalletBotWorld, username: String, balance: i32) {
     world.current_user = username.clone();
+    world.current_wallet_name = Some(username.clone()); // 设置当前钱包名称
     let database = world.database.as_ref().unwrap();
     let _ = database.create_wallet(TEST_CHAT_ID, &username).await;
     let _ = database.add_transaction(
         TEST_CHAT_ID,
+        &username,
         "收入", 
-        &username, 
         balance as f64, 
-        &format!("tx_{}", rand::random::<u32>()),
-        "初始余额"
+        "初始余额",
+        &format!("tx_{}", rand::random::<u32>())
     ).await;
 }
 
@@ -480,11 +483,11 @@ async fn record_expense_transaction(world: &mut WalletBotWorld, amount: i32, des
     let database = world.database.as_ref().unwrap();
     let result = database.add_transaction(
         TEST_CHAT_ID,
+        &world.current_user,
         "支出", 
-        &world.current_user, 
         -(amount as f64), 
-        &format!("tx_{}", rand::random::<u32>()),
-        &description
+        &description,
+        &format!("tx_{}", rand::random::<u32>())
     ).await;
     assert!(result.is_ok());
 }
@@ -568,8 +571,8 @@ async fn get_wallet_transactions_with_name(world: &mut WalletBotWorld, wallet_na
 #[then(expr = "应该返回 {int} 条交易记录")]
 async fn should_return_transaction_count(world: &mut WalletBotWorld, expected_count: i32) {
     let database = world.database.as_ref().unwrap();
-    let default_wallet = "测试钱包".to_string();
-    let wallet_name = world.current_wallet_name.as_ref().unwrap_or(&default_wallet);
+    // 必须使用当前钱包名称，不使用默认值
+    let wallet_name = world.current_wallet_name.as_ref().expect("Current wallet name should be set");
     let transactions = database.get_transactions(TEST_CHAT_ID, wallet_name).await.unwrap();
     assert_eq!(transactions.len(), expected_count as usize);
 }
@@ -751,14 +754,17 @@ async fn process_message(world: &mut WalletBotWorld) {
         // 设置当前钱包名称
         world.current_wallet_name = Some(parsed.wallet_name.clone());
         
+        // 确保钱包存在，不存在则创建
+        let _ = database.get_or_create_wallet(TEST_CHAT_ID, &parsed.wallet_name).await;
+        
         // 记录交易
         let _ = database.add_transaction(
             TEST_CHAT_ID,
-            &parsed.transaction_type,
             &parsed.wallet_name,
+            &parsed.transaction_type,
             parsed.amount,
-            &transaction_id,
-            "从消息解析的交易"
+            "从消息解析的交易",
+            &transaction_id
         ).await;
         
         // 发送确认消息
@@ -783,8 +789,8 @@ async fn message_should_parse_successfully(world: &mut WalletBotWorld) {
 #[then(expr = "交易应该记录到数据库")]
 async fn transaction_should_be_recorded_to_database(world: &mut WalletBotWorld) {
     let database = world.database.as_ref().unwrap();
-    let default_wallet = "测试钱包".to_string();
-    let wallet_name = world.current_wallet_name.as_ref().unwrap_or(&default_wallet);
+    // 必须使用当前钱包名称，不使用默认值
+    let wallet_name = world.current_wallet_name.as_ref().expect("Current wallet name should be set");
     let transactions = database.get_transactions(TEST_CHAT_ID, wallet_name).await.unwrap();
     assert!(!transactions.is_empty());
 }
@@ -836,11 +842,11 @@ async fn user_has_transaction_records(world: &mut WalletBotWorld, count: i32) {
     for i in 1..=count {
         let _ = database.add_transaction(
             TEST_CHAT_ID,
+            &world.current_user,
             "收入", 
-            &world.current_user, 
             i as f64, 
-            &format!("tx_{}_{}", i, rand::random::<u32>()),
-            &format!("交易{}", i)
+            &format!("交易{}", i),
+            &format!("tx_{}_{}", i, rand::random::<u32>())
         ).await;
     }
 }
@@ -952,13 +958,17 @@ async fn record_income_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "收入",
         &wallet_name,
+        "收入",
         amount,
-        "test_tx_id",
-        &format!("测试收入交易")
+        &format!("测试收入交易"),
+        "test_tx_id"
     ).await;
 }
 
@@ -972,13 +982,17 @@ async fn record_expense_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "支出",
         &wallet_name,
+        "支出",
         amount,
-        "test_tx_id",
-        &format!("测试支出交易")
+        &format!("测试支出交易"),
+        "test_tx_id"
     ).await;
 }
 
@@ -992,13 +1006,17 @@ async fn record_outgoing_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "出账",
         &wallet_name,
+        "出账",
         amount,
-        "test_tx_id",
-        &format!("测试出账交易")
+        &format!("测试出账交易"),
+        "test_tx_id"
     ).await;
 }
 
@@ -1012,13 +1030,17 @@ async fn record_incoming_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "入账",
         &wallet_name,
+        "入账",
         amount,
-        "test_tx_id",
-        &format!("测试入账交易")
+        &format!("测试入账交易"),
+        "test_tx_id"
     ).await;
 }
 
@@ -1032,13 +1054,17 @@ async fn has_income_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "收入",
         &wallet_name,
+        "收入",
         amount,
-        "test_tx_income",
-        &format!("测试收入交易")
+        &format!("测试收入交易"),
+        "test_tx_income"
     ).await;
 }
 
@@ -1052,19 +1078,24 @@ async fn has_expense_transaction_with_details(
 ) {
     let database = world.database.as_ref().unwrap();
     world.current_wallet_name = Some(wallet_name.clone());
+    
+    // 确保钱包存在，不存在则创建
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await;
+    
     let _ = database.add_transaction(
         TEST_CHAT_ID,
-        "支出",
         &wallet_name,
+        "支出",
         amount,
-        "test_tx_expense",
-        &format!("测试支出交易")
+        &format!("测试支出交易"),
+        "test_tx_expense"
     ).await;
 }
 
 #[given(expr = "用户 {string} 已经有钱包 余额为 {float}")]
 async fn user_has_wallet_with_balance_float(world: &mut WalletBotWorld, username: String, balance: f64) {
     world.current_user = username.clone();
+    world.current_wallet_name = Some(username.clone()); // 设置当前钱包名称
     let database = world.database.as_ref().unwrap();
     
     // 创建钱包
@@ -1075,7 +1106,7 @@ async fn user_has_wallet_with_balance_float(world: &mut WalletBotWorld, username
         let _ = database.add_transaction(
             TEST_CHAT_ID,
             "初始余额",
-            "测试钱包",
+            &username, // 使用用户名作为钱包名
             balance,
             "initial_balance",
             "初始余额设置"
@@ -1087,12 +1118,22 @@ async fn user_has_wallet_with_balance_float(world: &mut WalletBotWorld, username
 async fn user_wallet_balance_is_float(world: &mut WalletBotWorld, balance: f64) {
     let database = world.database.as_ref().unwrap();
     
+    // 确保有一个默认钱包名称
+    if world.current_wallet_name.is_none() {
+        world.current_wallet_name = Some(world.current_user.clone());
+    }
+    
+    let wallet_name = world.current_wallet_name.as_ref().unwrap();
+    
+    // 确保钱包存在
+    let _ = database.get_or_create_wallet(TEST_CHAT_ID, wallet_name).await;
+    
     // 设置余额（通过添加一笔交易）
     if balance > 0.0 {
         let _ = database.add_transaction(
             TEST_CHAT_ID,
             "初始余额",
-            "测试钱包",
+            wallet_name,
             balance,
             "initial_balance_float",
             "初始余额设置"
@@ -1117,8 +1158,8 @@ async fn wallet_balance_should_decrease_float(world: &mut WalletBotWorld, expect
 #[then(expr = "余额应该是 {float}")]
 async fn balance_should_be_float(world: &mut WalletBotWorld, expected_balance: f64) {
     let database = world.database.as_ref().unwrap();
-    let default_wallet = "测试钱包".to_string();
-    let wallet_name = world.current_wallet_name.as_ref().unwrap_or(&default_wallet);
+    // 必须使用当前钱包名称，不使用默认值
+    let wallet_name = world.current_wallet_name.as_ref().expect("Current wallet name should be set");
     let balance = database.get_balance(TEST_CHAT_ID, wallet_name).await.unwrap_or(0.0);
     assert_eq!(balance, expected_balance);
 }
@@ -1126,8 +1167,8 @@ async fn balance_should_be_float(world: &mut WalletBotWorld, expected_balance: f
 #[then(expr = "初始余额应该是 {float}")]
 async fn initial_balance_should_be_float(world: &mut WalletBotWorld, expected_balance: f64) {
     let database = world.database.as_ref().unwrap();
-    let default_wallet = "测试钱包".to_string();
-    let wallet_name = world.current_wallet_name.as_ref().unwrap_or(&default_wallet);
+    // 必须使用当前钱包名称，不使用默认值
+    let wallet_name = world.current_wallet_name.as_ref().expect("Current wallet name should be set");
     let balance = database.get_balance(TEST_CHAT_ID, wallet_name).await.unwrap_or(0.0);
     assert_eq!(balance, expected_balance);
 }

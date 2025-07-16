@@ -58,6 +58,7 @@ impl MessageHandler {
                 
                 // 智能计算余额
                 match self.calculator.smart_calculate_balance(
+                    message.chat.id.0,
                     &parsed.wallet_name,
                     &parsed.transaction_type,
                     parsed.amount,
@@ -65,7 +66,6 @@ impl MessageHandler {
                     &parsed.year,
                     parsed.total_amount,
                     Some(message.id.0 as i64),
-                    Some(message.chat.id.0),
                 ).await {
                     Ok(balance_update) => {
                         // 构建新消息文本
@@ -84,13 +84,13 @@ impl MessageHandler {
 
                         // 记录交易
                         if let Err(e) = self.db.record_transaction(
+                            message.chat.id.0,
                             &parsed.wallet_name,
                             &parsed.transaction_type,
                             parsed.amount,
                             &parsed.month,
                             &parsed.year,
                             Some(message.id.0 as i64),
-                            Some(message.chat.id.0),
                         ).await {
                             error!("Failed to record transaction: {}", e);
                         }
@@ -147,21 +147,21 @@ impl MessageHandler {
             // 如果有总额，使用总额更新余额
             if let Some(total_amount) = parsed.total_amount {
                 match self.calculator.update_from_manual_total(
+                    message.chat.id.0,
                     &parsed.wallet_name,
                     total_amount,
                     Some(message.id.0 as i64),
-                    Some(message.chat.id.0),
                 ).await {
                     Ok(balance_update) => {
                         // 记录交易（即使是从总额更新，也需要记录这个交易）
                         if let Err(e) = self.db.record_transaction(
+                            message.chat.id.0,
                             &parsed.wallet_name,
                             &parsed.transaction_type,
                             parsed.amount,
                             &parsed.month,
                             &parsed.year,
                             Some(message.id.0 as i64),
-                            Some(message.chat.id.0),
                         ).await {
                             error!("Failed to record transaction: {}", e);
                         }

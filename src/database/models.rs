@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wallet {
     pub id: Option<i64>,
+    pub chat_id: i64,
     pub name: String,
     pub current_balance: f64,
     pub created_at: Option<DateTime<Utc>>,

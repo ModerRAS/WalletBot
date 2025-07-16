@@ -41,7 +41,10 @@ impl MessageHandler {
             // 检查消息是否已经处理过
             if self.db.is_message_processed(message.id.0 as i64, message.chat.id.0).await
                 .unwrap_or(false) {
-                debug!("Message already processed, skipping");
+                debug!("Message already processed, sending duplicate warning");
+                // 发送重复消息提示
+                let warning_text = "⚠️ 这条消息已经被处理过了，不会重复记录交易。";
+                bot.send_message(message.chat.id, warning_text).await?;
                 return Ok(());
             }
             
@@ -107,6 +110,14 @@ impl MessageHandler {
                             error!("Failed to record message: {}", e);
                         }
 
+                        // 发送确认消息
+                        let confirmation_text = format!(
+                            "✅ 交易已记录\n📊 钱包：{}\n💰 当前余额：{:.2}元",
+                            parsed.wallet_name,
+                            balance_update.new_balance
+                        );
+                        bot.send_message(message.chat.id, &confirmation_text).await?;
+
                         match balance_update.source {
                             BalanceUpdateSource::Transaction => {
                                 info!("Successfully processed transaction: {} {} -> {}", 
@@ -124,10 +135,16 @@ impl MessageHandler {
                     }
                     Err(e) => {
                         error!("Failed to calculate balance: {}", e);
+                        // 发送错误消息
+                        let error_text = "❌ 处理交易时出现错误，请稍后重试或联系管理员。";
+                        bot.send_message(message.chat.id, error_text).await?;
                     }
                 }
             } else {
                 warn!("Failed to parse wallet message: {}", text);
+                // 发送格式错误提示和使用说明
+                let help_text = "❌ 消息格式不正确\n\n📋 正确格式：\n#钱包名称 #月份 #年份\n#出账/入账 金额元\n\n💡 示例：\n#支付宝 #12月 #2024年\n#出账 150.00元\n\n或者：\n#微信 #01月 #2024年\n#入账 200.00元\n\n❓ 需要帮助请输入 /help";
+                bot.send_message(message.chat.id, help_text).await?;
             }
         }
 
@@ -177,6 +194,14 @@ impl MessageHandler {
                         ).await {
                             error!("Failed to record message: {}", e);
                         }
+
+                        // 发送确认消息（手动总额更新）
+                        let confirmation_text = format!(
+                            "✅ 余额已更新（手动总额）\n📊 钱包：{}\n💰 当前余额：{:.2}元",
+                            parsed.wallet_name,
+                            balance_update.new_balance
+                        );
+                        let _ = bot.send_message(message.chat.id, &confirmation_text).await;
 
                         info!("Successfully processed message with manual total: {} {} -> {}", 
                               parsed.wallet_name, balance_update.old_balance, balance_update.new_balance);

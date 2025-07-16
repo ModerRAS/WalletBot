@@ -2,6 +2,7 @@ use teloxide::{Bot, types::Message, RequestError, requests::Requester};
 use crate::bot::handler::MessageHandler;
 use log::{info, error};
 
+#[derive(Clone)]
 pub struct Commands {
     handler: MessageHandler,
 }

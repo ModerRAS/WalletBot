@@ -12,7 +12,7 @@ use anyhow::Result;
 use dotenv::dotenv;
 
 use config::Settings;
-use bot::MessageHandler;
+use bot::{MessageHandler, start_bot};
 use database::DatabaseOperations;
 use utils::Logger;
 
@@ -57,12 +57,8 @@ async fn main() -> Result<()> {
     };
     
     // 初始化消息处理器
-    let _message_handler = MessageHandler::new(db);
+    let message_handler = MessageHandler::new(db);
     Logger::log_operation_success("MessageHandler", "Handler initialized successfully");
-    
-    // 创建Bot实例
-    let _bot = teloxide::Bot::new(&settings.telegram_bot_token);
-    Logger::log_operation_success("TelegramBot", "Bot instance created successfully");
     
     info!("🤖 WalletBot initialized successfully!");
     info!("📊 Configuration:");
@@ -71,12 +67,17 @@ async fn main() -> Result<()> {
     info!("  - Max Retry Attempts: {}", settings.max_retry_attempts);
     info!("  - Processing Timeout: {}s", settings.processing_timeout);
     
-    // 暂时只进行初始化，不启动消息处理循环
-    info!("🔧 Bot initialization completed. To start message processing, add the message handling loop.");
-    info!("💡 Next steps:");
-    info!("  1. Set TELEGRAM_BOT_TOKEN in .env file");
-    info!("  2. Test with actual Telegram messages");
-    info!("  3. Monitor logs for transaction processing");
+    // 启动机器人
+    info!("🚀 Starting WalletBot...");
+    match start_bot(&settings.telegram_bot_token, message_handler).await {
+        Ok(()) => {
+            Logger::log_operation_success("WalletBot", "Bot stopped gracefully");
+        }
+        Err(e) => {
+            Logger::log_operation_failure("WalletBot", &e.to_string());
+            return Err(e);
+        }
+    }
     
     Ok(())
 }

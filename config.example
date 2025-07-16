@@ -1,36 +1,74 @@
-# WalletBot Configuration Example
-# Copy this file to .env and update with your actual values
+# WalletBot 配置文件示例
+# 将此文件复制为 .env 并填入实际配置值
 
-# Telegram Bot Configuration
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-# Get your bot token from @BotFather on Telegram
+# ======================
+# 必需配置
+# ======================
 
-# Database Configuration
+# Telegram Bot Token
+# 从 @BotFather 获取你的 bot token
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# 数据库路径
+# SQLite 数据库文件路径，建议使用绝对路径
 DATABASE_URL=wallet_bot.db
-# SQLite database file path
 
-# Logging Configuration
-RUST_LOG=info
-# Log levels: error, warn, info, debug, trace
+# ======================
+# 机器人配置
+# ======================
 
-# Bot Configuration
+# 机器人名称
 BOT_NAME=WalletBot
-# Bot display name
 
-# Channel Configuration (Optional)
-# TARGET_CHANNEL_ID=-1001234567890
-# Specific channel ID to monitor (leave empty to monitor all channels)
-
-# Processing Configuration
+# 最大重试次数
 MAX_RETRY_ATTEMPTS=3
-# Maximum number of retry attempts for failed operations
 
+# 处理超时时间（秒）
 PROCESSING_TIMEOUT=30
-# Timeout in seconds for message processing
 
-# Backup Configuration
-BACKUP_INTERVAL=3600
-# Backup interval in seconds (3600 = 1 hour)
+# ======================
+# 日志配置
+# ======================
 
-BACKUP_RETENTION_DAYS=7
-# Number of days to retain backup files 
+# 日志级别
+# 可选值: error, warn, info, debug, trace
+# 推荐: info (生产环境) 或 debug (开发环境)
+RUST_LOG=info
+
+# ======================
+# 可选配置
+# ======================
+
+# Webhook 配置 (如果使用 webhook 而不是长轮询)
+# WEBHOOK_URL=https://your-domain.com/webhook
+# WEBHOOK_PORT=8080
+
+# 代理配置 (如果需要通过代理访问 Telegram API)
+# HTTP_PROXY=http://proxy.example.com:8080
+# HTTPS_PROXY=https://proxy.example.com:8080
+
+# ======================
+# 使用说明
+# ======================
+
+# 1. 将此文件复制为 .env:
+#    cp config.example .env
+#
+# 2. 在 Telegram 中找到 @BotFather，创建新机器人并获取 token
+#
+# 3. 将获取的 token 填入 TELEGRAM_BOT_TOKEN
+#
+# 4. 运行机器人:
+#    cargo run --release
+#
+# 5. 在 Telegram 中向你的机器人发送 /start 开始使用
+#
+# 支持的消息格式:
+# #钱包名称 #月份 #年份
+# #出账/入账 金额元
+#
+# 示例:
+# #支付宝 #12月 #2024年
+# #出账 150.00元
+#
+# 机器人会自动计算余额并在消息后添加 #总额 信息 

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 # Telegram Bot API
 teloxide = { version = "0.12", features = ["macros", "webhooks"] }
+dptree = "0.3"
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }

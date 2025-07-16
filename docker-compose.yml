@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  walletbot:
+    build: .
+    container_name: walletbot
+    restart: unless-stopped
+    environment:
+      # 从环境变量或.env文件读取
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=/app/data/wallet_bot.db
+      - RUST_LOG=${RUST_LOG:-info}
+      - BOT_NAME=${BOT_NAME:-WalletBot}
+      - MAX_RETRY_ATTEMPTS=${MAX_RETRY_ATTEMPTS:-3}
+      - PROCESSING_TIMEOUT=${PROCESSING_TIMEOUT:-30}
+    volumes:
+      # 持久化数据库文件
+      - wallet_data:/app/data
+    # healthcheck暂时禁用，因为使用distroless镜像
+    # healthcheck:
+    #   test: ["CMD", "/app/walletbot", "--version"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+    # 如果需要网络访问可以取消注释
+    # ports:
+    #   - "8080:8080"
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+volumes:
+  wallet_data:
+    driver: local 

@@ -773,7 +773,7 @@ async fn process_message(world: &mut WalletBotWorld) {
         let _ = world.bot_api.send_message(message.chat.id, &confirmation_message).await;
     } else {
         // 发送错误消息
-        let error_message = "消息格式不正确，请使用正确的格式";
+        let error_message = "消息格式不正确，请查看使用说明以了解正确的格式";
         let _ = world.bot_api.send_message(message.chat.id, error_message).await;
     }
 }

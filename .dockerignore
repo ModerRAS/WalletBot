@@ -1,58 +1,27 @@
-# Git相关
-.git
-.gitignore
-.gitattributes
-
-# Rust构建输出
-target/
-**/target/
-
-# IDE和编辑器
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# 系统文件
-.DS_Store
-Thumbs.db
-
-# 环境和配置文件
-.env
-.env.local
-.env.*.local
-*.db
-*.sqlite
-*.sqlite3
-
-# 文档
-*.md
-docs/
-README*
-CHANGELOG*
-LICENSE*
-
-# 测试和临时文件
+# 排除源代码（我们只需要预构建的二进制文件）
+src/
 tests/
-tmp/
-temp/
+
+# 排除构建输出（除了 artifacts 目录）
+target/
+!target/release/walletbot
+
+# 排除开发文件
+.git/
+.github/
+*.md
+LICENSE
+Cargo.toml
+Cargo.lock
+config.example
+docker-compose.yml
+
+# 排除测试和文档
+docs/
+*.feature
+
+# 排除临时文件
 *.tmp
 *.log
-
-# CI/CD
-.github/
-.circleci/
-.travis.yml
-.gitlab-ci.yml
-
-# Docker相关
-Dockerfile*
-docker-compose*
-.dockerignore
-
-# 其他
-node_modules/
-coverage/
-*.tgz
-*.tar.gz
+.DS_Store
+Thumbs.db

@@ -28,22 +28,19 @@ impl BalanceCalculator {
 
         // 获取当前余额
         let current_balance = wallet.current_balance;
-        debug!("Current balance for {}: {}", wallet_name, current_balance);
+        debug!("Current balance for {wallet_name}: {current_balance}");
 
         // 计算新余额
         let new_balance = match transaction_type {
             "出账" => current_balance - amount,
             "入账" => current_balance + amount,
             _ => {
-                warn!("Unknown transaction type: {}", transaction_type);
+                warn!("Unknown transaction type: {transaction_type}");
                 current_balance
             }
         };
 
-        info!(
-            "Calculated new balance for {}: {} -> {}",
-            wallet_name, current_balance, new_balance
-        );
+        info!("Calculated new balance for {wallet_name}: {current_balance} -> {new_balance}");
         Ok(new_balance)
     }
 
@@ -55,10 +52,7 @@ impl BalanceCalculator {
         total_amount: f64,
         _message_id: Option<i64>,
     ) -> Result<BalanceUpdate> {
-        debug!(
-            "Updating balance from manual total: {} -> {}",
-            wallet_name, total_amount
-        );
+        debug!("Updating balance from manual total: {wallet_name} -> {total_amount}");
 
         // 获取或创建钱包
         let wallet = self.db.get_or_create_wallet(chat_id, wallet_name).await?;
@@ -69,10 +63,7 @@ impl BalanceCalculator {
             .update_wallet_balance(chat_id, wallet_name, total_amount)
             .await?;
 
-        info!(
-            "Updated balance from manual edit: {} {} -> {}",
-            wallet_name, old_balance, total_amount
-        );
+        info!("Updated balance from manual edit: {wallet_name} {old_balance} -> {total_amount}");
 
         Ok(BalanceUpdate {
             wallet_name: wallet_name.to_string(),
@@ -137,6 +128,7 @@ impl BalanceCalculator {
     }
 
     /// 获取最新的余额信息
+    #[allow(dead_code)]
     pub async fn get_latest_balance(
         &self,
         chat_id: i64,
@@ -150,6 +142,7 @@ impl BalanceCalculator {
     }
 
     /// 检查余额是否需要调整
+    #[allow(dead_code)]
     pub async fn should_adjust_balance(
         &self,
         _wallet_name: &str,
@@ -161,6 +154,7 @@ impl BalanceCalculator {
     }
 
     /// 生成余额调整记录
+    #[allow(dead_code)]
     pub async fn create_balance_adjustment(
         &self,
         wallet_name: &str,
@@ -171,8 +165,7 @@ impl BalanceCalculator {
         _chat_id: Option<i64>,
     ) -> Result<()> {
         info!(
-            "Creating balance adjustment for {}: {} -> {} ({})",
-            wallet_name, old_balance, new_balance, reason
+            "Creating balance adjustment for {wallet_name}: {old_balance} -> {new_balance} ({reason})"
         );
 
         // 这里可以添加审计日志逻辑

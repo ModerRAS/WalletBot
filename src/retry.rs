@@ -6,6 +6,7 @@ use tokio::time::sleep;
 #[cfg(test)]
 use crate::error::WalletBotError;
 
+#[allow(dead_code)]
 pub struct RetryConfig {
     pub max_attempts: u32,
     pub base_delay: Duration,
@@ -24,6 +25,7 @@ impl Default for RetryConfig {
     }
 }
 
+#[allow(dead_code)]
 pub async fn retry_with_backoff<F, Fut, T>(
     mut operation: F,
     config: RetryConfig,
@@ -45,18 +47,12 @@ where
         match operation().await {
             Ok(result) => {
                 if attempt > 1 {
-                    debug!(
-                        "Operation '{}' succeeded on attempt {}",
-                        operation_name, attempt
-                    );
+                    debug!("Operation '{operation_name}' succeeded on attempt {attempt}");
                 }
                 return Ok(result);
             }
             Err(error) => {
-                warn!(
-                    "Operation '{}' failed on attempt {}: {}",
-                    operation_name, attempt, error
-                );
+                warn!("Operation '{operation_name}' failed on attempt {attempt}: {error}");
 
                 // 检查错误是否可重试
                 if !error.is_retryable() {
@@ -68,7 +64,7 @@ where
 
                 // 如果还有重试机会，等待后重试
                 if attempt < config.max_attempts {
-                    debug!("Waiting {:?} before next attempt", delay);
+                    debug!("Waiting {delay:?} before next attempt");
                     sleep(delay).await;
 
                     // 指数退避

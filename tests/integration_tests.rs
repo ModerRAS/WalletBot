@@ -49,6 +49,12 @@ pub struct MockDeletedMessage {
     pub message_id: MessageId,
 }
 
+impl Default for MockBotApi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockBotApi {
     pub fn new() -> Self {
         Self {
@@ -228,6 +234,7 @@ async fn create_test_db() -> Result<DatabaseOperations> {
     DatabaseOperations::new(":memory:").await
 }
 
+#[allow(dead_code)]
 async fn create_test_handler() -> Result<MessageHandler> {
     let db = create_test_db().await?;
     Ok(MessageHandler::new(db))

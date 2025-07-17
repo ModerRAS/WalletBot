@@ -13,15 +13,19 @@ pub enum WalletBotError {
     Telegram(#[from] RequestError),
 
     #[error("Parser error: {message}")]
+    #[allow(dead_code)]
     Parser { message: String },
 
     #[error("Balance calculation error: {message}")]
+    #[allow(dead_code)]
     BalanceCalculation { message: String },
 
     #[error("Wallet not found: {name}")]
+    #[allow(dead_code)]
     WalletNotFound { name: String },
 
     #[error("Invalid message format: {message}")]
+    #[allow(dead_code)]
     InvalidMessageFormat { message: String },
 
     #[error("IO error: {0}")]
@@ -31,25 +35,30 @@ pub enum WalletBotError {
     Env(#[from] std::env::VarError),
 }
 
+#[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, WalletBotError>;
 
 impl WalletBotError {
+    #[allow(dead_code)]
     pub fn parser_error(message: impl Into<String>) -> Self {
         Self::Parser {
             message: message.into(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn balance_calculation_error(message: impl Into<String>) -> Self {
         Self::BalanceCalculation {
             message: message.into(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn wallet_not_found(name: impl Into<String>) -> Self {
         Self::WalletNotFound { name: name.into() }
     }
 
+    #[allow(dead_code)]
     pub fn invalid_message_format(message: impl Into<String>) -> Self {
         Self::InvalidMessageFormat {
             message: message.into(),
@@ -57,6 +66,7 @@ impl WalletBotError {
     }
 
     /// 检查错误是否为可重试的类型
+    #[allow(dead_code)]
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
@@ -65,6 +75,7 @@ impl WalletBotError {
     }
 
     /// 获取错误的严重程度
+    #[allow(dead_code)]
     pub fn severity(&self) -> ErrorSeverity {
         match self {
             WalletBotError::Config(_) => ErrorSeverity::Critical,
@@ -81,6 +92,7 @@ impl WalletBotError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ErrorSeverity {
     Low,
     Medium,

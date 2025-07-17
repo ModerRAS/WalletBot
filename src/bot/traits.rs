@@ -6,6 +6,7 @@ use teloxide::{
 
 /// 抽象Bot API操作的trait，用于测试时mock
 #[async_trait]
+#[allow(dead_code)]
 pub trait BotApi {
     /// 发送消息
     async fn send_message(&self, chat_id: ChatId, text: &str) -> Result<Message, RequestError>;

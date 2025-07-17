@@ -26,7 +26,7 @@ impl MessageHandler {
     pub async fn handle_message(&self, bot: &Bot, message: &Message) -> Result<(), RequestError> {
         // 只处理文本消息
         if let Some(text) = message.text() {
-            debug!("Processing message: {}", text);
+            debug!("Processing message: {text}");
 
             // 检查是否是钱包相关消息
             if !self.parser.is_wallet_message(text) {
@@ -99,7 +99,7 @@ impl MessageHandler {
                             )
                             .await
                         {
-                            error!("Failed to record transaction: {}", e);
+                            error!("Failed to record transaction: {e}");
                         }
 
                         // 记录消息处理状态
@@ -115,7 +115,7 @@ impl MessageHandler {
                             )
                             .await
                         {
-                            error!("Failed to record message: {}", e);
+                            error!("Failed to record message: {e}");
                         }
 
                         // 发送确认消息
@@ -152,14 +152,14 @@ impl MessageHandler {
                         }
                     }
                     Err(e) => {
-                        error!("Failed to calculate balance: {}", e);
+                        error!("Failed to calculate balance: {e}");
                         // 发送错误消息
                         let error_text = "❌ 处理交易时出现错误，请稍后重试或联系管理员。";
                         bot.send_message(message.chat.id, error_text).await?;
                     }
                 }
             } else {
-                warn!("Failed to parse wallet message: {}", text);
+                warn!("Failed to parse wallet message: {text}");
                 // 发送格式错误提示和使用说明
                 let help_text = "❌ 消息格式不正确\n\n📋 正确格式：\n#钱包名称 #月份 #年份\n#出账/入账 金额元\n\n💡 示例：\n#支付宝 #12月 #2024年\n#出账 150.00元\n\n或者：\n#微信 #01月 #2024年\n#入账 200.00元\n\n❓ 需要帮助请输入 /help";
                 bot.send_message(message.chat.id, help_text).await?;
@@ -206,7 +206,7 @@ impl MessageHandler {
                             )
                             .await
                         {
-                            error!("Failed to record transaction: {}", e);
+                            error!("Failed to record transaction: {e}");
                         }
 
                         // 记录消息处理状态
@@ -222,7 +222,7 @@ impl MessageHandler {
                             )
                             .await
                         {
-                            error!("Failed to record message: {}", e);
+                            error!("Failed to record message: {e}");
                         }
 
                         // 发送确认消息（手动总额更新）
@@ -240,7 +240,7 @@ impl MessageHandler {
                         );
                     }
                     Err(e) => {
-                        error!("Failed to update balance from manual total: {}", e);
+                        error!("Failed to update balance from manual total: {e}");
                     }
                 }
             }

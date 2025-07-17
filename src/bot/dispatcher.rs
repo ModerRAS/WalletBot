@@ -50,7 +50,7 @@ impl BotDispatcher {
                     move |bot: Bot, msg: Message, cmd: Command| {
                         let commands = commands.clone();
                         async move {
-                            debug!("Handling command: {:?}", cmd);
+                            debug!("Handling command: {cmd:?}");
 
                             let command_str = match cmd {
                                 Command::Start => "/start",
@@ -60,7 +60,7 @@ impl BotDispatcher {
                             };
 
                             if let Err(e) = commands.handle_command(&bot, &msg, command_str).await {
-                                error!("Failed to handle command {}: {}", command_str, e);
+                                error!("Failed to handle command {command_str}: {e}");
                             }
 
                             Ok::<(), RequestError>(())
@@ -82,17 +82,14 @@ impl BotDispatcher {
                                 if let MessageKind::Common(common_msg) = &msg.kind {
                                     if let MediaKind::Text(_) = &common_msg.media_kind {
                                         if let Err(e) = handler.handle_message(&bot, &msg).await {
-                                            error!("Failed to handle message: {}", e);
+                                            error!("Failed to handle message: {e}");
 
                                             // 发送通用错误消息
                                             let error_text = "❌ 处理消息时发生错误，请稍后重试。";
                                             if let Err(send_err) =
                                                 bot.send_message(msg.chat.id, error_text).await
                                             {
-                                                error!(
-                                                    "Failed to send error message: {}",
-                                                    send_err
-                                                );
+                                                error!("Failed to send error message: {send_err}");
                                             }
                                         }
                                     }
@@ -128,7 +125,7 @@ pub async fn start_bot(token: &str, message_handler: MessageHandler) -> Result<(
             info!("  - ID: {}", me.id);
         }
         Err(e) => {
-            error!("❌ Failed to connect to Telegram Bot API: {}", e);
+            error!("❌ Failed to connect to Telegram Bot API: {e}");
             return Err(anyhow::anyhow!("Bot connection failed: {}", e));
         }
     }

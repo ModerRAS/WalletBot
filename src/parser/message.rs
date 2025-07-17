@@ -15,7 +15,7 @@ impl MessageParser {
     }
 
     pub fn parse(&self, text: &str) -> Option<ParsedMessage> {
-        debug!("Parsing message: {}", text);
+        debug!("Parsing message: {text}");
 
         // 解析钱包名称
         let wallet_name = self
@@ -25,7 +25,7 @@ impl MessageParser {
             .get(1)?
             .as_str()
             .to_string();
-        debug!("Wallet name: {}", wallet_name);
+        debug!("Wallet name: {wallet_name}");
 
         // 解析交易类型
         let transaction_type = self
@@ -35,22 +35,22 @@ impl MessageParser {
             .get(1)?
             .as_str()
             .to_string();
-        debug!("Transaction type: {}", transaction_type);
+        debug!("Transaction type: {transaction_type}");
 
         // 解析金额 - 需要找到交易金额，而不是总额
         let amount = self.parse_transaction_amount(text)?;
-        debug!("Transaction amount: {}", amount);
+        debug!("Transaction amount: {amount}");
 
         // 解析时间
         let time_captures = self.patterns.time_regex.captures(text)?;
         let month = time_captures.get(1)?.as_str().to_string();
         let year = time_captures.get(2)?.as_str().to_string();
-        debug!("Time: {}月 {}年", month, year);
+        debug!("Time: {month}月 {year}年");
 
         // 解析总额（如果存在）
         let total_amount = self.parse_total_amount(text);
         if let Some(total) = total_amount {
-            debug!("Total amount found: {}", total);
+            debug!("Total amount found: {total}");
         }
 
         Some(ParsedMessage {
@@ -103,6 +103,7 @@ impl MessageParser {
         self.patterns.total_regex.is_match(text)
     }
 
+    #[allow(dead_code)]
     pub fn extract_total_amount(&self, text: &str) -> Option<f64> {
         self.parse_total_amount(text)
     }
@@ -116,6 +117,7 @@ impl MessageParser {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Transaction {
     pub transaction_type: String,
     pub amount: f64,
@@ -123,6 +125,7 @@ pub struct Transaction {
 }
 
 impl MessageParser {
+    #[allow(dead_code)]
     pub fn parse_transaction(&self, text: &str) -> Result<Transaction, anyhow::Error> {
         // 简化的交易解析，适用于"收入 100 工作收入"这样的格式
         let parts: Vec<&str> = text.split_whitespace().collect();

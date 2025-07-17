@@ -106,10 +106,7 @@ impl DatabaseOperations {
         )?;
 
         let wallet_id = conn.last_insert_rowid();
-        debug!(
-            "Created new wallet: {} in chat {} with ID: {}",
-            name, chat_id, wallet_id
-        );
+        debug!("Created new wallet: {name} in chat {chat_id} with ID: {wallet_id}");
 
         Ok(Wallet {
             id: Some(wallet_id),
@@ -135,10 +132,7 @@ impl DatabaseOperations {
             params![balance, now, chat_id, name],
         )?;
 
-        info!(
-            "Updated wallet balance: {} in chat {} -> {}",
-            name, chat_id, balance
-        );
+        info!("Updated wallet balance: {name} in chat {chat_id} -> {balance}");
         Ok(())
     }
 
@@ -166,10 +160,7 @@ impl DatabaseOperations {
             params![wallet_id, transaction_type, amount, month, year, message_id, Some(chat_id), now],
         )?;
 
-        debug!(
-            "Recorded transaction: {} {} {}",
-            wallet_name, transaction_type, amount
-        );
+        debug!("Recorded transaction: {wallet_name} {transaction_type} {amount}");
         Ok(())
     }
 
@@ -195,10 +186,11 @@ impl DatabaseOperations {
             params![message_id, chat_id, wallet_id, has_total, true, original_balance, new_balance, now],
         )?;
 
-        debug!("Recorded message: {} in chat {}", message_id, chat_id);
+        debug!("Recorded message: {message_id} in chat {chat_id}");
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_latest_balance(
         &self,
         chat_id: i64,
@@ -226,6 +218,7 @@ impl DatabaseOperations {
         Ok(!rows.is_empty())
     }
 
+    #[allow(dead_code)]
     pub async fn get_transactions(
         &self,
         chat_id: i64,
@@ -263,16 +256,19 @@ impl DatabaseOperations {
         Ok(transactions)
     }
 
+    #[allow(dead_code)]
     pub async fn get_balance(&self, chat_id: i64, wallet_name: &str) -> Result<f64> {
         let conn = self.conn.lock().await;
         let wallet = self.get_wallet_by_name_sync(&conn, chat_id, wallet_name)?;
         Ok(wallet.current_balance)
     }
 
+    #[allow(dead_code)]
     pub async fn create_wallet(&self, chat_id: i64, name: &str) -> Result<Wallet> {
         self.get_or_create_wallet(chat_id, name).await
     }
 
+    #[allow(dead_code)]
     pub async fn wallet_exists(&self, chat_id: i64, name: &str) -> Result<bool> {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare("SELECT 1 FROM wallets WHERE chat_id = ?1 AND name = ?2")?;
@@ -280,6 +276,7 @@ impl DatabaseOperations {
         Ok(exists)
     }
 
+    #[allow(dead_code)]
     pub async fn add_transaction(
         &self,
         chat_id: i64,

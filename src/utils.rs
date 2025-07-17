@@ -9,17 +9,18 @@ pub struct Logger;
 
 impl Logger {
     pub fn log_operation_start(operation: &str, details: &str) {
-        info!("🚀 Starting {}: {}", operation, details);
+        info!("🚀 Starting {operation}: {details}");
     }
 
     pub fn log_operation_success(operation: &str, details: &str) {
-        info!("✅ {} completed successfully: {}", operation, details);
+        info!("✅ {operation} completed successfully: {details}");
     }
 
     pub fn log_operation_failure(operation: &str, error: &str) {
-        error!("❌ {} failed: {}", operation, error);
+        error!("❌ {operation} failed: {error}");
     }
 
+    #[allow(dead_code)]
     pub fn log_wallet_transaction(
         wallet_name: &str,
         transaction_type: &str,
@@ -28,36 +29,36 @@ impl Logger {
         new_balance: f64,
     ) {
         info!(
-            "💰 Wallet Transaction: {} | {} {:.2}元 | {} → {:.2}元",
-            wallet_name, transaction_type, amount, old_balance, new_balance
+            "💰 Wallet Transaction: {wallet_name} | {transaction_type} {amount:.2}元 | {old_balance} → {new_balance:.2}元"
         );
     }
 
+    #[allow(dead_code)]
     pub fn log_balance_update(wallet_name: &str, old_balance: f64, new_balance: f64, source: &str) {
         info!(
-            "🔄 Balance Update: {} | {:.2}元 → {:.2}元 ({})",
-            wallet_name, old_balance, new_balance, source
+            "🔄 Balance Update: {wallet_name} | {old_balance:.2}元 → {new_balance:.2}元 ({source})"
         );
     }
 
+    #[allow(dead_code)]
     pub fn log_message_processed(message_id: i64, chat_id: i64, wallet_name: &str) {
-        info!(
-            "📝 Message Processed: ID={} Chat={} Wallet={}",
-            message_id, chat_id, wallet_name
-        );
+        info!("📝 Message Processed: ID={message_id} Chat={chat_id} Wallet={wallet_name}");
     }
 }
 
 /// 格式化工具
+#[allow(dead_code)]
 pub struct Formatter;
 
 impl Formatter {
     /// 格式化金额显示
+    #[allow(dead_code)]
     pub fn format_amount(amount: f64) -> String {
-        format!("{:.2}元", amount)
+        format!("{amount:.2}元")
     }
 
     /// 格式化百分比变化
+    #[allow(dead_code)]
     pub fn format_balance_change(old_balance: f64, new_balance: f64) -> String {
         if old_balance == 0.0 {
             return "初始设置".to_string();
@@ -67,33 +68,38 @@ impl Formatter {
         let percentage = (change / old_balance.abs()) * 100.0;
 
         if change > 0.0 {
-            format!("+{:.2}元 (+{:.1}%)", change, percentage)
+            format!("+{change:.2}元 (+{percentage:.1}%)")
         } else {
-            format!("{:.2}元 ({:.1}%)", change, percentage)
+            format!("{change:.2}元 ({percentage:.1}%)")
         }
     }
 
     /// 格式化时间戳
+    #[allow(dead_code)]
     pub fn format_timestamp(timestamp: DateTime<Utc>) -> String {
         timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string()
     }
 }
 
 /// 验证工具
+#[allow(dead_code)]
 pub struct Validator;
 
 impl Validator {
     /// 验证钱包名称
+    #[allow(dead_code)]
     pub fn is_valid_wallet_name(name: &str) -> bool {
         !name.is_empty() && name.len() <= 100 && !name.contains('\n')
     }
 
     /// 验证金额
+    #[allow(dead_code)]
     pub fn is_valid_amount(amount: f64) -> bool {
         (0.0..=999_999_999.99).contains(&amount) && !amount.is_nan() && !amount.is_infinite()
     }
 
     /// 验证月份
+    #[allow(dead_code)]
     pub fn is_valid_month(month: &str) -> bool {
         if let Ok(m) = month.parse::<u32>() {
             (1..=12).contains(&m)
@@ -103,6 +109,7 @@ impl Validator {
     }
 
     /// 验证年份
+    #[allow(dead_code)]
     pub fn is_valid_year(year: &str) -> bool {
         if let Ok(y) = year.parse::<u32>() {
             (2000..=2100).contains(&y)
@@ -113,10 +120,12 @@ impl Validator {
 }
 
 /// 文件工具
+#[allow(dead_code)]
 pub struct FileUtils;
 
 impl FileUtils {
     /// 确保目录存在
+    #[allow(dead_code)]
     pub fn ensure_dir_exists(path: &Path) -> Result<()> {
         if !path.exists() {
             fs::create_dir_all(path)?;
@@ -126,6 +135,7 @@ impl FileUtils {
     }
 
     /// 备份文件
+    #[allow(dead_code)]
     pub fn backup_file(source: &Path, backup_dir: &Path) -> Result<()> {
         if !source.exists() {
             warn!("Source file does not exist: {}", source.display());
@@ -152,6 +162,7 @@ impl FileUtils {
     }
 
     /// 清理旧备份文件
+    #[allow(dead_code)]
     pub fn cleanup_old_backups(backup_dir: &Path, retention_days: u32) -> Result<()> {
         if !backup_dir.exists() {
             return Ok(());
@@ -182,7 +193,7 @@ impl FileUtils {
         }
 
         if deleted_count > 0 {
-            info!("Cleaned up {} old backup files", deleted_count);
+            info!("Cleaned up {deleted_count} old backup files");
         }
 
         Ok(())

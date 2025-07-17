@@ -45,16 +45,20 @@ pub struct ParsedMessage {
     pub month: String,
     pub year: String,
     pub total_amount: Option<f64>, // 解析出的总额（如果有）
+    #[allow(dead_code)]
     pub original_text: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct BalanceUpdate {
+    #[allow(dead_code)]
     pub wallet_name: String,
     pub old_balance: f64,
     pub new_balance: f64,
     pub source: BalanceUpdateSource,
+    #[allow(dead_code)]
     pub message_id: Option<i64>,
+    #[allow(dead_code)]
     pub chat_id: Option<i64>,
 }
 
@@ -62,5 +66,6 @@ pub struct BalanceUpdate {
 pub enum BalanceUpdateSource {
     Transaction, // 从交易计算
     ManualEdit,  // 从手动编辑的总额
-    Initial,     // 初始设置
+    #[allow(dead_code)]
+    Initial, // 初始设置
 }

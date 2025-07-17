@@ -9,9 +9,9 @@ pub mod retry;
 pub mod utils;
 
 // 重新导出常用的类型和结构体
-pub use bot::{Commands, MessageHandler};
-pub use calculator::BalanceCalculator;
+pub use bot::{commands::Commands, MessageHandler};
+pub use calculator::balance::BalanceCalculator;
 pub use config::Settings;
 pub use database::{models, DatabaseOperations};
 pub use error::WalletBotError;
-pub use parser::MessageParser;
+pub use parser::message::MessageParser;

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tempfile::NamedTempFile;
 use anyhow::Result;
 use async_trait::async_trait;
 use cucumber::{given, when, then, World};
@@ -228,7 +227,6 @@ pub struct WalletBotWorld {
     pub last_result: Option<Result<(), WalletBotError>>,
     pub parse_result: Option<ParsedMessage>,
     pub simple_parse_result: Option<Transaction>,
-    pub temp_file: Option<NamedTempFile>,
 }
 
 impl WalletBotWorld {
@@ -248,16 +246,13 @@ impl WalletBotWorld {
             last_result: None,
             parse_result: None,
             simple_parse_result: None,
-            temp_file: None,
         }
     }
 
     async fn setup_database(&mut self) -> Result<()> {
-        let temp_file = NamedTempFile::new()?;
-        let db_path = temp_file.path().to_str().unwrap();
-        let database = DatabaseOperations::new(db_path).await?;
+        // 使用内存数据库避免文件系统权限问题
+        let database = DatabaseOperations::new(":memory:").await?;
         self.database = Some(database);
-        self.temp_file = Some(temp_file);
         Ok(())
     }
 

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tempfile::NamedTempFile;
 use serial_test::serial;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -213,9 +212,8 @@ impl BotApi for MockBotApi {
 
 // 测试辅助函数
 async fn create_test_db() -> Result<DatabaseOperations> {
-    let temp_file = NamedTempFile::new()?;
-    let db_path = temp_file.path().to_str().unwrap();
-    DatabaseOperations::new(db_path).await
+    // 使用内存数据库避免文件系统权限问题
+    DatabaseOperations::new(":memory:").await
 }
 
 async fn create_test_handler() -> Result<MessageHandler> {
@@ -512,9 +510,8 @@ async fn test_concurrent_operations() -> Result<()> {
 async fn test_multi_chat_wallet_isolation() -> Result<()> {
     println!("🧪 测试多聊天环境下的钱包隔离");
     
-    let temp_file = NamedTempFile::new()?;
-    let db_path = temp_file.path().to_str().unwrap();
-    let db = DatabaseOperations::new(db_path).await?;
+    // 使用内存数据库避免文件系统权限问题
+    let db = DatabaseOperations::new(":memory:").await?;
     
     let chat_id_1 = 12345i64;
     let chat_id_2 = 67890i64;
@@ -561,9 +558,8 @@ async fn test_multi_chat_wallet_isolation() -> Result<()> {
 async fn test_same_wallet_different_chats() -> Result<()> {
     println!("🧪 测试不同聊天环境下相同钱包名称的处理");
     
-    let temp_file = NamedTempFile::new()?;
-    let db_path = temp_file.path().to_str().unwrap();
-    let db = DatabaseOperations::new(db_path).await?;
+    // 使用内存数据库避免文件系统权限问题
+    let db = DatabaseOperations::new(":memory:").await?;
     
     let chat_ids = vec![11111i64, 22222i64, 33333i64];
     let wallet_names = vec!["微信", "支付宝", "银行卡"];

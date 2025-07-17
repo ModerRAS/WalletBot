@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Wallet {
@@ -60,7 +60,7 @@ pub struct BalanceUpdate {
 
 #[derive(Debug, Clone)]
 pub enum BalanceUpdateSource {
-    Transaction,    // 从交易计算
-    ManualEdit,     // 从手动编辑的总额
-    Initial,        // 初始设置
-} 
+    Transaction, // 从交易计算
+    ManualEdit,  // 从手动编辑的总额
+    Initial,     // 初始设置
+}

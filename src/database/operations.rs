@@ -1,10 +1,10 @@
-use crate::database::models::{Wallet, Transaction, Message};
-use rusqlite::{Connection, Result as SqliteResult, params};
+use crate::database::models::{Message, Transaction, Wallet};
+use anyhow::Result;
+use chrono::{Datelike, Utc};
+use log::{debug, error, info};
+use rusqlite::{params, Connection, Result as SqliteResult};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use anyhow::Result;
-use log::{debug, info, error};
-use chrono::{Utc, Datelike};
 
 #[derive(Clone, Debug)]
 pub struct DatabaseOperations {
@@ -17,14 +17,14 @@ impl DatabaseOperations {
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
         };
-        
+
         db.init_schema().await?;
         Ok(db)
     }
 
     async fn init_schema(&self) -> Result<()> {
         let conn = self.conn.lock().await;
-        
+
         // 创建钱包表
         conn.execute(
             "CREATE TABLE IF NOT EXISTS wallets (
@@ -80,7 +80,7 @@ impl DatabaseOperations {
 
     pub async fn get_or_create_wallet(&self, chat_id: i64, name: &str) -> Result<Wallet> {
         let conn = self.conn.lock().await;
-        
+
         // 尝试获取现有钱包
         let mut stmt = conn.prepare("SELECT id, chat_id, name, current_balance, created_at, updated_at FROM wallets WHERE chat_id = ?1 AND name = ?2")?;
         let wallet_iter = stmt.query_map(params![chat_id, name], |row| {
@@ -106,7 +106,10 @@ impl DatabaseOperations {
         )?;
 
         let wallet_id = conn.last_insert_rowid();
-        debug!("Created new wallet: {} in chat {} with ID: {}", name, chat_id, wallet_id);
+        debug!(
+            "Created new wallet: {} in chat {} with ID: {}",
+            name, chat_id, wallet_id
+        );
 
         Ok(Wallet {
             id: Some(wallet_id),
@@ -118,16 +121,24 @@ impl DatabaseOperations {
         })
     }
 
-    pub async fn update_wallet_balance(&self, chat_id: i64, name: &str, balance: f64) -> Result<()> {
+    pub async fn update_wallet_balance(
+        &self,
+        chat_id: i64,
+        name: &str,
+        balance: f64,
+    ) -> Result<()> {
         let conn = self.conn.lock().await;
         let now = Utc::now();
-        
+
         conn.execute(
             "UPDATE wallets SET current_balance = ?1, updated_at = ?2 WHERE chat_id = ?3 AND name = ?4",
             params![balance, now, chat_id, name],
         )?;
 
-        info!("Updated wallet balance: {} in chat {} -> {}", name, chat_id, balance);
+        info!(
+            "Updated wallet balance: {} in chat {} -> {}",
+            name, chat_id, balance
+        );
         Ok(())
     }
 
@@ -142,11 +153,11 @@ impl DatabaseOperations {
         message_id: Option<i64>,
     ) -> Result<()> {
         let conn = self.conn.lock().await;
-        
+
         // 获取钱包ID
         let wallet = self.get_wallet_by_name_sync(&conn, chat_id, wallet_name)?;
         let wallet_id = wallet.id.unwrap();
-        
+
         let now = Utc::now();
         conn.execute(
             "INSERT INTO transactions (wallet_id, transaction_type, amount, month, year, message_id, chat_id, created_at) 
@@ -154,7 +165,10 @@ impl DatabaseOperations {
             params![wallet_id, transaction_type, amount, month, year, message_id, Some(chat_id), now],
         )?;
 
-        debug!("Recorded transaction: {} {} {}", wallet_name, transaction_type, amount);
+        debug!(
+            "Recorded transaction: {} {} {}",
+            wallet_name, transaction_type, amount
+        );
         Ok(())
     }
 
@@ -168,11 +182,11 @@ impl DatabaseOperations {
         new_balance: Option<f64>,
     ) -> Result<()> {
         let conn = self.conn.lock().await;
-        
+
         // 获取钱包ID
         let wallet = self.get_wallet_by_name_sync(&conn, chat_id, wallet_name)?;
         let wallet_id = wallet.id.unwrap();
-        
+
         let now = Utc::now();
         conn.execute(
             "INSERT OR REPLACE INTO messages (message_id, chat_id, wallet_id, has_total, processed, original_balance, new_balance, created_at) 
@@ -184,37 +198,48 @@ impl DatabaseOperations {
         Ok(())
     }
 
-    pub async fn get_latest_balance(&self, chat_id: i64, wallet_name: &str, month: &str, year: &str) -> Result<f64> {
+    pub async fn get_latest_balance(
+        &self,
+        chat_id: i64,
+        wallet_name: &str,
+        month: &str,
+        year: &str,
+    ) -> Result<f64> {
         let conn = self.conn.lock().await;
-        
+
         // 获取钱包
         let wallet = self.get_wallet_by_name_sync(&conn, chat_id, wallet_name)?;
-        
+
         // 返回当前余额
         Ok(wallet.current_balance)
     }
 
     pub async fn is_message_processed(&self, message_id: i64, chat_id: i64) -> Result<bool> {
         let conn = self.conn.lock().await;
-        let mut stmt = conn.prepare("SELECT id FROM messages WHERE message_id = ? AND chat_id = ?")?;
-        let rows: Vec<i64> = stmt.query_map(params![message_id, chat_id], |row| {
-            Ok(row.get(0)?)
-        })?.collect::<SqliteResult<Vec<i64>>>()?;
-        
+        let mut stmt =
+            conn.prepare("SELECT id FROM messages WHERE message_id = ? AND chat_id = ?")?;
+        let rows: Vec<i64> = stmt
+            .query_map(params![message_id, chat_id], |row| Ok(row.get(0)?))?
+            .collect::<SqliteResult<Vec<i64>>>()?;
+
         Ok(!rows.is_empty())
     }
 
-    pub async fn get_transactions(&self, chat_id: i64, wallet_name: &str) -> Result<Vec<Transaction>> {
+    pub async fn get_transactions(
+        &self,
+        chat_id: i64,
+        wallet_name: &str,
+    ) -> Result<Vec<Transaction>> {
         let conn = self.conn.lock().await;
         let wallet = self.get_wallet_by_name_sync(&conn, chat_id, wallet_name)?;
-        
+
         let mut stmt = conn.prepare(
             "SELECT id, wallet_id, transaction_type, amount, month, year, message_id, chat_id, created_at 
              FROM transactions 
              WHERE wallet_id = ? 
              ORDER BY created_at DESC"
         )?;
-        
+
         let rows = stmt.query_map(params![wallet.id], |row| {
             Ok(Transaction {
                 id: Some(row.get(0)?),
@@ -228,12 +253,12 @@ impl DatabaseOperations {
                 created_at: row.get(8)?,
             })
         })?;
-        
+
         let mut transactions = Vec::new();
         for row in rows {
             transactions.push(row?);
         }
-        
+
         Ok(transactions)
     }
 
@@ -265,12 +290,12 @@ impl DatabaseOperations {
     ) -> Result<()> {
         // 确保钱包存在
         let _ = self.get_or_create_wallet(chat_id, wallet_name).await?;
-        
+
         // 对于简化的API，我们使用当前时间
         let now = Utc::now();
         let month = format!("{:02}", now.month());
         let year = now.year().to_string();
-        
+
         self.record_transaction(
             chat_id,
             wallet_name,
@@ -279,8 +304,9 @@ impl DatabaseOperations {
             &month,
             &year,
             None,
-        ).await?;
-        
+        )
+        .await?;
+
         // 更新钱包余额
         let current_balance = self.get_balance(chat_id, wallet_name).await?;
         let new_balance = match transaction_type {
@@ -288,13 +314,19 @@ impl DatabaseOperations {
             "支出" | "出账" => current_balance - amount,
             _ => current_balance - amount, // 默认为支出类型
         };
-        
-        self.update_wallet_balance(chat_id, wallet_name, new_balance).await?;
-        
+
+        self.update_wallet_balance(chat_id, wallet_name, new_balance)
+            .await?;
+
         Ok(())
     }
 
-    fn get_wallet_by_name_sync(&self, conn: &Connection, chat_id: i64, name: &str) -> Result<Wallet> {
+    fn get_wallet_by_name_sync(
+        &self,
+        conn: &Connection,
+        chat_id: i64,
+        name: &str,
+    ) -> Result<Wallet> {
         let mut stmt = conn.prepare("SELECT id, chat_id, name, current_balance, created_at, updated_at FROM wallets WHERE chat_id = ?1 AND name = ?2")?;
         let wallet_iter = stmt.query_map(params![chat_id, name], |row| {
             Ok(Wallet {
@@ -311,8 +343,12 @@ impl DatabaseOperations {
             return Ok(wallet?);
         }
 
-        Err(anyhow::anyhow!("Wallet not found: {} in chat {}", name, chat_id))
+        Err(anyhow::anyhow!(
+            "Wallet not found: {} in chat {}",
+            name,
+            chat_id
+        ))
     }
 }
 
-// Tests will be added later 
+// Tests will be added later

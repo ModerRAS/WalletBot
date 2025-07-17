@@ -16,15 +16,25 @@ impl MessageParser {
 
     pub fn parse(&self, text: &str) -> Option<ParsedMessage> {
         debug!("Parsing message: {}", text);
-        
+
         // 解析钱包名称
-        let wallet_name = self.patterns.wallet_regex.captures(text)?
-            .get(1)?.as_str().to_string();
+        let wallet_name = self
+            .patterns
+            .wallet_regex
+            .captures(text)?
+            .get(1)?
+            .as_str()
+            .to_string();
         debug!("Wallet name: {}", wallet_name);
 
         // 解析交易类型
-        let transaction_type = self.patterns.transaction_regex.captures(text)?
-            .get(1)?.as_str().to_string();
+        let transaction_type = self
+            .patterns
+            .transaction_regex
+            .captures(text)?
+            .get(1)?
+            .as_str()
+            .to_string();
         debug!("Transaction type: {}", transaction_type);
 
         // 解析金额 - 需要找到交易金额，而不是总额
@@ -68,7 +78,7 @@ impl MessageParser {
                 }
             }
         }
-        
+
         // 返回第一个非总额的金额
         amounts.into_iter().next()
     }
@@ -80,7 +90,9 @@ impl MessageParser {
     }
 
     fn parse_total_amount(&self, text: &str) -> Option<f64> {
-        self.patterns.total_regex.captures(text)?
+        self.patterns
+            .total_regex
+            .captures(text)?
             .get(1)?
             .as_str()
             .parse::<f64>()
@@ -97,9 +109,9 @@ impl MessageParser {
 
     /// 检查消息是否符合钱包操作格式
     pub fn is_wallet_message(&self, text: &str) -> bool {
-        self.patterns.wallet_regex.is_match(text) && 
-        self.patterns.transaction_regex.is_match(text) &&
-        self.patterns.amount_regex.is_match(text)
+        self.patterns.wallet_regex.is_match(text)
+            && self.patterns.transaction_regex.is_match(text)
+            && self.patterns.amount_regex.is_match(text)
     }
 }
 
@@ -114,21 +126,22 @@ impl MessageParser {
     pub fn parse_transaction(&self, text: &str) -> Result<Transaction, anyhow::Error> {
         // 简化的交易解析，适用于"收入 100 工作收入"这样的格式
         let parts: Vec<&str> = text.trim().split_whitespace().collect();
-        
+
         if parts.len() < 3 {
             return Err(anyhow::Error::msg("Invalid transaction format"));
         }
-        
+
         let transaction_type = parts[0].to_string();
-        let amount = parts[1].parse::<f64>()
+        let amount = parts[1]
+            .parse::<f64>()
             .map_err(|_| anyhow::Error::msg("Invalid amount"))?;
         let description = parts[2..].join(" ");
-        
+
         // 验证交易类型
         if transaction_type != "收入" && transaction_type != "支出" {
             return Err(anyhow::Error::msg("Invalid transaction type"));
         }
-        
+
         Ok(Transaction {
             transaction_type,
             amount,
@@ -143,4 +156,4 @@ impl Default for MessageParser {
     }
 }
 
-// Tests will be added later 
+// Tests will be added later

@@ -1,24 +1,24 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use serial_test::serial;
 use anyhow::Result;
 use async_trait::async_trait;
+use serial_test::serial;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 // 导入我们需要测试的模块
-use walletbot::database::operations::DatabaseOperations;
 use walletbot::bot::handler::MessageHandler;
 use walletbot::bot::traits::BotApi;
+use walletbot::database::operations::DatabaseOperations;
 use walletbot::parser::message::MessageParser;
 
 // 测试用的常量
 const TEST_CHAT_ID: i64 = 12345;
 
+use chrono::Utc;
 use teloxide::types::{
-    Message, Chat, ChatId, MessageId, User, UserId, MessageKind, MessageCommon, 
-    MediaKind, MediaText,
+    Chat, ChatId, MediaKind, MediaText, Message, MessageCommon, MessageId, MessageKind, User,
+    UserId,
 };
 use teloxide::RequestError;
-use chrono::Utc;
 
 // Mock Bot API 实现
 #[derive(Debug, Clone)]
@@ -141,7 +141,9 @@ impl MockBotApi {
 impl BotApi for MockBotApi {
     async fn send_message(&self, chat_id: ChatId, text: &str) -> Result<Message, RequestError> {
         if *self.should_fail.lock().await {
-            return Err(RequestError::Api(teloxide::ApiError::Unknown("Mock error".to_string())));
+            return Err(RequestError::Api(teloxide::ApiError::Unknown(
+                "Mock error".to_string(),
+            )));
         }
 
         let message_id = MessageId(rand::random::<i32>().abs());
@@ -162,7 +164,9 @@ impl BotApi for MockBotApi {
         text: &str,
     ) -> Result<Message, RequestError> {
         if *self.should_fail.lock().await {
-            return Err(RequestError::Api(teloxide::ApiError::Unknown("Mock error".to_string())));
+            return Err(RequestError::Api(teloxide::ApiError::Unknown(
+                "Mock error".to_string(),
+            )));
         }
 
         let mut messages = self.edited_messages.lock().await;
@@ -175,9 +179,15 @@ impl BotApi for MockBotApi {
         Ok(Self::create_mock_message(chat_id, message_id, text))
     }
 
-    async fn delete_message(&self, chat_id: ChatId, message_id: MessageId) -> Result<(), RequestError> {
+    async fn delete_message(
+        &self,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> Result<(), RequestError> {
         if *self.should_fail.lock().await {
-            return Err(RequestError::Api(teloxide::ApiError::Unknown("Mock error".to_string())));
+            return Err(RequestError::Api(teloxide::ApiError::Unknown(
+                "Mock error".to_string(),
+            )));
         }
 
         let mut messages = self.deleted_messages.lock().await;
@@ -195,7 +205,9 @@ impl BotApi for MockBotApi {
         text: &str,
     ) -> Result<Message, RequestError> {
         if *self.should_fail.lock().await {
-            return Err(RequestError::Api(teloxide::ApiError::Unknown("Mock error".to_string())));
+            return Err(RequestError::Api(teloxide::ApiError::Unknown(
+                "Mock error".to_string(),
+            )));
         }
 
         let message_id = MessageId(rand::random::<i32>().abs());
@@ -226,11 +238,11 @@ async fn create_test_handler() -> Result<MessageHandler> {
 #[serial]
 async fn test_message_parser() -> Result<()> {
     let parser = MessageParser::new();
-    
+
     // 测试正常的钱包消息
     let test_message = "#支付宝 #12月 #2024年\n#出账 150.00元";
     let parsed = parser.parse(test_message);
-    
+
     assert!(parsed.is_some());
     let parsed = parsed.unwrap();
     assert_eq!(parsed.wallet_name, "支付宝");
@@ -238,16 +250,19 @@ async fn test_message_parser() -> Result<()> {
     assert_eq!(parsed.amount, 150.0);
     assert_eq!(parsed.month, "12月");
     assert_eq!(parsed.year, "2024年");
-    
+
     // 测试非钱包消息
     let non_wallet_message = "这是一个普通消息";
     assert!(!parser.is_wallet_message(non_wallet_message));
-    
+
     // 测试包含总额的消息
     let message_with_total = "#支付宝 #12月 #2024年\n#出账 150.00元\n#总额 1000.00元";
     assert!(parser.has_total(message_with_total));
-    assert_eq!(parser.extract_total_amount(message_with_total), Some(1000.0));
-    
+    assert_eq!(
+        parser.extract_total_amount(message_with_total),
+        Some(1000.0)
+    );
+
     println!("✅ 消息解析器测试通过");
     Ok(())
 }
@@ -257,17 +272,18 @@ async fn test_message_parser() -> Result<()> {
 #[serial]
 async fn test_database_operations() -> Result<()> {
     let db = create_test_db().await?;
-    
+
     // 测试创建钱包
     let wallet = db.get_or_create_wallet(TEST_CHAT_ID, "测试钱包").await?;
     assert_eq!(wallet.name, "测试钱包");
     assert_eq!(wallet.current_balance, 0.0);
-    
+
     // 测试更新余额
-    db.update_wallet_balance(TEST_CHAT_ID, "测试钱包", 1000.0).await?;
+    db.update_wallet_balance(TEST_CHAT_ID, "测试钱包", 1000.0)
+        .await?;
     let updated_wallet = db.get_or_create_wallet(TEST_CHAT_ID, "测试钱包").await?;
     assert_eq!(updated_wallet.current_balance, 1000.0);
-    
+
     // 测试记录交易
     db.record_transaction(
         TEST_CHAT_ID,
@@ -277,15 +293,24 @@ async fn test_database_operations() -> Result<()> {
         "12",
         "2024",
         Some(456),
-    ).await?;
-    
+    )
+    .await?;
+
     // 测试记录消息处理状态
-    db.record_message(123, TEST_CHAT_ID, "测试钱包", true, Some(1000.0), Some(850.0)).await?;
-    
+    db.record_message(
+        123,
+        TEST_CHAT_ID,
+        "测试钱包",
+        true,
+        Some(1000.0),
+        Some(850.0),
+    )
+    .await?;
+
     // 测试检查消息是否已处理
     let is_processed = db.is_message_processed(123, TEST_CHAT_ID).await?;
     assert!(is_processed);
-    
+
     println!("✅ 数据库操作测试通过");
     Ok(())
 }
@@ -295,46 +320,48 @@ async fn test_database_operations() -> Result<()> {
 #[serial]
 async fn test_mock_bot_api() -> Result<()> {
     let mock_bot = MockBotApi::new();
-    
+
     // 测试发送消息
     let chat_id = ChatId(TEST_CHAT_ID);
     let message_text = "测试消息";
-    
+
     let result = mock_bot.send_message(chat_id, message_text).await;
     assert!(result.is_ok());
-    
+
     let sent_messages = mock_bot.get_sent_messages().await;
     assert_eq!(sent_messages.len(), 1);
     assert_eq!(sent_messages[0].chat_id, chat_id);
     assert_eq!(sent_messages[0].text, message_text);
-    
+
     // 测试编辑消息
     let message_id = MessageId(1);
     let edited_text = "编辑后的消息";
-    
-    let result = mock_bot.edit_message_text(chat_id, message_id, edited_text).await;
+
+    let result = mock_bot
+        .edit_message_text(chat_id, message_id, edited_text)
+        .await;
     assert!(result.is_ok());
-    
+
     let edited_messages = mock_bot.get_edited_messages().await;
     assert_eq!(edited_messages.len(), 1);
     assert_eq!(edited_messages[0].chat_id, chat_id);
     assert_eq!(edited_messages[0].message_id, message_id);
     assert_eq!(edited_messages[0].text, edited_text);
-    
+
     // 测试删除消息
     let result = mock_bot.delete_message(chat_id, message_id).await;
     assert!(result.is_ok());
-    
+
     let deleted_messages = mock_bot.get_deleted_messages().await;
     assert_eq!(deleted_messages.len(), 1);
     assert_eq!(deleted_messages[0].chat_id, chat_id);
     assert_eq!(deleted_messages[0].message_id, message_id);
-    
+
     // 测试失败情况
     mock_bot.set_should_fail(true).await;
     let result = mock_bot.send_message(chat_id, "这应该失败").await;
     assert!(result.is_err());
-    
+
     println!("✅ Mock Bot API测试通过");
     Ok(())
 }
@@ -344,22 +371,22 @@ async fn test_mock_bot_api() -> Result<()> {
 #[serial]
 async fn test_error_handling() -> Result<()> {
     let parser = MessageParser::new();
-    
+
     // 测试无效消息格式
     let invalid_messages = vec![
         "普通消息",
-        "#支付宝 #出账 150.00元", // 缺少时间
-        "#支付宝 #12月 #2024年", // 缺少交易信息
-        "#支付宝 #12月 #2024年\n#出账", // 缺少金额
+        "#支付宝 #出账 150.00元",             // 缺少时间
+        "#支付宝 #12月 #2024年",              // 缺少交易信息
+        "#支付宝 #12月 #2024年\n#出账",       // 缺少金额
         "#支付宝 #12月 #2024年\n#出账 abc元", // 无效金额
     ];
-    
+
     for message in invalid_messages {
         let parsed = parser.parse(message);
         assert!(parsed.is_none() || !parser.is_wallet_message(message));
         println!("✅ 正确拒绝无效消息: {}", message);
     }
-    
+
     println!("✅ 错误处理测试通过");
     Ok(())
 }
@@ -369,21 +396,22 @@ async fn test_error_handling() -> Result<()> {
 #[serial]
 async fn test_duplicate_message_handling() -> Result<()> {
     let db = create_test_db().await?;
-    
+
     // 首先创建钱包
     let _wallet = db.get_or_create_wallet(TEST_CHAT_ID, "支付宝").await?;
-    
+
     // 记录一条消息
-    db.record_message(123, TEST_CHAT_ID, "支付宝", true, Some(1000.0), Some(850.0)).await?;
-    
+    db.record_message(123, TEST_CHAT_ID, "支付宝", true, Some(1000.0), Some(850.0))
+        .await?;
+
     // 检查是否已处理
     let is_processed = db.is_message_processed(123, TEST_CHAT_ID).await?;
     assert!(is_processed);
-    
+
     // 不同的消息ID应该返回false
     let is_processed_different = db.is_message_processed(124, TEST_CHAT_ID).await?;
     assert!(!is_processed_different);
-    
+
     println!("✅ 重复消息处理测试通过");
     Ok(())
 }
@@ -394,7 +422,7 @@ async fn test_duplicate_message_handling() -> Result<()> {
 async fn test_complete_message_flow() -> Result<()> {
     let db = create_test_db().await?;
     let _handler = MessageHandler::new(db.clone());
-    
+
     // 测试场景：处理多个钱包交易
     let test_scenarios = vec![
         (
@@ -403,12 +431,7 @@ async fn test_complete_message_flow() -> Result<()> {
             "出账",
             150.0,
         ),
-        (
-            "#微信 #12月 #2024年\n#入账 200.00元",
-            "微信",
-            "入账",
-            200.0,
-        ),
+        ("#微信 #12月 #2024年\n#入账 200.00元", "微信", "入账", 200.0),
         (
             "#支付宝 #12月 #2024年\n#入账 50.00元",
             "支付宝",
@@ -416,23 +439,23 @@ async fn test_complete_message_flow() -> Result<()> {
             50.0,
         ),
     ];
-    
+
     for (message_text, wallet_name, transaction_type, amount) in test_scenarios {
         // 验证消息能正确解析
         let parser = MessageParser::new();
         let parsed = parser.parse(message_text);
         assert!(parsed.is_some());
-        
+
         let parsed = parsed.unwrap();
         assert_eq!(parsed.wallet_name, wallet_name);
         assert_eq!(parsed.transaction_type, transaction_type);
         assert_eq!(parsed.amount, amount);
-        
+
         // 验证数据库操作
         let wallet = db.get_or_create_wallet(TEST_CHAT_ID, wallet_name).await?;
         println!("钱包 {} 当前余额: {}", wallet_name, wallet.current_balance);
     }
-    
+
     println!("✅ 完整消息处理流程测试通过");
     Ok(())
 }
@@ -443,20 +466,22 @@ async fn test_complete_message_flow() -> Result<()> {
 async fn test_performance() -> Result<()> {
     let db = create_test_db().await?;
     let parser = MessageParser::new();
-    
+
     let test_message = "#支付宝 #12月 #2024年\n#出账 150.00元";
-    
+
     // 测试解析性能
     let start_time = std::time::Instant::now();
     for _ in 0..1000 {
         let _parsed = parser.parse(test_message);
     }
     let parse_duration = start_time.elapsed();
-    
+
     // 测试数据库性能
     // 首先创建钱包
-    let _wallet = db.get_or_create_wallet(TEST_CHAT_ID, "性能测试钱包").await?;
-    
+    let _wallet = db
+        .get_or_create_wallet(TEST_CHAT_ID, "性能测试钱包")
+        .await?;
+
     let start_time = std::time::Instant::now();
     for i in 0..100 {
         db.record_transaction(
@@ -467,16 +492,17 @@ async fn test_performance() -> Result<()> {
             "12",
             "2024",
             Some(12345),
-        ).await?;
+        )
+        .await?;
     }
     let db_duration = start_time.elapsed();
-    
+
     println!("✅ 性能测试结果:");
     println!("  - 1000次消息解析耗时: {:?}", parse_duration);
     println!("  - 100次数据库操作耗时: {:?}", db_duration);
     println!("  - 平均单次解析耗时: {:?}", parse_duration / 1000);
     println!("  - 平均单次数据库操作耗时: {:?}", db_duration / 100);
-    
+
     Ok(())
 }
 
@@ -485,23 +511,25 @@ async fn test_performance() -> Result<()> {
 #[serial]
 async fn test_concurrent_operations() -> Result<()> {
     let db = create_test_db().await?;
-    
+
     // 并发创建多个钱包
     let mut handles = vec![];
     for i in 0..10 {
         let db_clone = db.clone();
         let handle = tokio::spawn(async move {
             let wallet_name = format!("并发测试钱包{}", i);
-            db_clone.get_or_create_wallet(TEST_CHAT_ID, &wallet_name).await
+            db_clone
+                .get_or_create_wallet(TEST_CHAT_ID, &wallet_name)
+                .await
         });
         handles.push(handle);
     }
-    
+
     // 等待所有操作完成
     for handle in handles {
         handle.await??;
     }
-    
+
     println!("✅ 并发操作测试通过");
     Ok(())
 }
@@ -509,47 +537,51 @@ async fn test_concurrent_operations() -> Result<()> {
 #[tokio::test]
 async fn test_multi_chat_wallet_isolation() -> Result<()> {
     println!("🧪 测试多聊天环境下的钱包隔离");
-    
+
     // 使用内存数据库避免文件系统权限问题
     let db = DatabaseOperations::new(":memory:").await?;
-    
+
     let chat_id_1 = 12345i64;
     let chat_id_2 = 67890i64;
     let wallet_name = "支付宝";
-    
+
     // 在不同聊天中创建同名钱包
     let wallet_1 = db.get_or_create_wallet(chat_id_1, wallet_name).await?;
     let wallet_2 = db.get_or_create_wallet(chat_id_2, wallet_name).await?;
-    
+
     // 钱包应该是不同的
     assert_ne!(wallet_1.id, wallet_2.id);
     assert_eq!(wallet_1.chat_id, chat_id_1);
     assert_eq!(wallet_2.chat_id, chat_id_2);
-    
+
     // 在不同聊天中添加不同余额
-    db.update_wallet_balance(chat_id_1, wallet_name, 100.0).await?;
-    db.update_wallet_balance(chat_id_2, wallet_name, 200.0).await?;
-    
+    db.update_wallet_balance(chat_id_1, wallet_name, 100.0)
+        .await?;
+    db.update_wallet_balance(chat_id_2, wallet_name, 200.0)
+        .await?;
+
     // 验证余额隔离
     let balance_1 = db.get_balance(chat_id_1, wallet_name).await?;
     let balance_2 = db.get_balance(chat_id_2, wallet_name).await?;
-    
+
     assert_eq!(balance_1, 100.0);
     assert_eq!(balance_2, 200.0);
-    
+
     // 在不同聊天中添加交易
-    db.record_transaction(chat_id_1, wallet_name, "入账", 50.0, "12", "2024", None).await?;
-    db.record_transaction(chat_id_2, wallet_name, "出账", 30.0, "12", "2024", None).await?;
-    
+    db.record_transaction(chat_id_1, wallet_name, "入账", 50.0, "12", "2024", None)
+        .await?;
+    db.record_transaction(chat_id_2, wallet_name, "出账", 30.0, "12", "2024", None)
+        .await?;
+
     // 验证交易隔离
     let transactions_1 = db.get_transactions(chat_id_1, wallet_name).await?;
     let transactions_2 = db.get_transactions(chat_id_2, wallet_name).await?;
-    
+
     assert_eq!(transactions_1.len(), 1);
     assert_eq!(transactions_2.len(), 1);
     assert_eq!(transactions_1[0].chat_id, Some(chat_id_1));
     assert_eq!(transactions_2[0].chat_id, Some(chat_id_2));
-    
+
     println!("✅ 多聊天环境钱包隔离测试通过");
     Ok(())
 }
@@ -557,49 +589,52 @@ async fn test_multi_chat_wallet_isolation() -> Result<()> {
 #[tokio::test]
 async fn test_same_wallet_different_chats() -> Result<()> {
     println!("🧪 测试不同聊天环境下相同钱包名称的处理");
-    
+
     // 使用内存数据库避免文件系统权限问题
     let db = DatabaseOperations::new(":memory:").await?;
-    
+
     let chat_ids = vec![11111i64, 22222i64, 33333i64];
     let wallet_names = vec!["微信", "支付宝", "银行卡"];
-    
+
     // 在每个聊天中创建所有类型的钱包
     for chat_id in &chat_ids {
         for wallet_name in &wallet_names {
             let wallet = db.get_or_create_wallet(*chat_id, wallet_name).await?;
             assert_eq!(wallet.chat_id, *chat_id);
             assert_eq!(wallet.name, *wallet_name);
-            
+
             // 设置不同的余额以区分
             let initial_balance = (*chat_id as f64) / 1000.0; // 11.111, 22.222, 33.333
-            db.update_wallet_balance(*chat_id, wallet_name, initial_balance).await?;
+            db.update_wallet_balance(*chat_id, wallet_name, initial_balance)
+                .await?;
         }
     }
-    
+
     // 验证每个聊天中的钱包都是独立的
     for chat_id in &chat_ids {
         for wallet_name in &wallet_names {
             let balance = db.get_balance(*chat_id, wallet_name).await?;
             let expected_balance = (*chat_id as f64) / 1000.0;
             assert_eq!(balance, expected_balance);
-            
+
             // 验证钱包存在性
             let exists = db.wallet_exists(*chat_id, wallet_name).await?;
             assert!(exists);
         }
     }
-    
+
     // 在不同聊天中操作同名钱包，验证互不干扰
-    db.add_transaction(chat_ids[0], "微信", "入账", 100.0, "测试交易", "tx1").await?;
-    db.add_transaction(chat_ids[1], "微信", "出账", 50.0, "测试交易", "tx2").await?;
-    
+    db.add_transaction(chat_ids[0], "微信", "入账", 100.0, "测试交易", "tx1")
+        .await?;
+    db.add_transaction(chat_ids[1], "微信", "出账", 50.0, "测试交易", "tx2")
+        .await?;
+
     let balance_0 = db.get_balance(chat_ids[0], "微信").await?;
     let balance_1 = db.get_balance(chat_ids[1], "微信").await?;
-    
+
     // 余额应该不同，说明钱包确实是隔离的
     assert_ne!(balance_0, balance_1);
-    
+
     println!("✅ 不同聊天环境下相同钱包名称处理测试通过");
     Ok(())
-} 
+}

@@ -2,4 +2,4 @@ pub mod models;
 pub mod operations;
 
 pub use models::*;
-pub use operations::DatabaseOperations; 
+pub use operations::DatabaseOperations;

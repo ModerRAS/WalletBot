@@ -1,14 +1,14 @@
+use anyhow::Result;
+use log::{debug, error, info};
 use teloxide::{
     prelude::*,
-    types::{Me, MessageKind, MediaKind},
+    types::{Me, MediaKind, MessageKind},
     utils::command::BotCommands,
     RequestError,
 };
-use log::{info, error, debug};
-use anyhow::Result;
 
-use crate::bot::handler::MessageHandler;
 use crate::bot::commands::Commands;
+use crate::bot::handler::MessageHandler;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(rename_rule = "lowercase", description = "支持的命令:")]
@@ -39,59 +39,71 @@ impl BotDispatcher {
 
     pub async fn run(self, bot: Bot) -> Result<()> {
         info!("🤖 Starting WalletBot dispatcher...");
-        
+
         let handler = self.message_handler.clone();
         let commands = self.commands.clone();
-        
-        Dispatcher::builder(bot, Update::filter_message().branch(
-            dptree::entry()
-                .filter_command::<Command>()
-                .endpoint(move |bot: Bot, msg: Message, cmd: Command| {
-                    let commands = commands.clone();
-                    async move {
-                        debug!("Handling command: {:?}", cmd);
-                        
-                        let command_str = match cmd {
-                            Command::Start => "/start",
-                            Command::Help => "/help", 
-                            Command::Reprocess => "/reprocess",
-                            Command::Status => "/status",
-                        };
 
-                        if let Err(e) = commands.handle_command(&bot, &msg, command_str).await {
-                            error!("Failed to handle command {}: {}", command_str, e);
+        Dispatcher::builder(
+            bot,
+            Update::filter_message()
+                .branch(dptree::entry().filter_command::<Command>().endpoint(
+                    move |bot: Bot, msg: Message, cmd: Command| {
+                        let commands = commands.clone();
+                        async move {
+                            debug!("Handling command: {:?}", cmd);
+
+                            let command_str = match cmd {
+                                Command::Start => "/start",
+                                Command::Help => "/help",
+                                Command::Reprocess => "/reprocess",
+                                Command::Status => "/status",
+                            };
+
+                            if let Err(e) = commands.handle_command(&bot, &msg, command_str).await {
+                                error!("Failed to handle command {}: {}", command_str, e);
+                            }
+
+                            Ok::<(), RequestError>(())
                         }
+                    },
+                ))
+                .branch(
+                    dptree::filter(|msg: Message| msg.text().is_some()).endpoint(
+                        move |bot: Bot, msg: Message| {
+                            let handler = handler.clone();
+                            async move {
+                                debug!(
+                                    "Handling message from chat: {}, user: {:?}",
+                                    msg.chat.id,
+                                    msg.from()
+                                );
 
-                        Ok::<(), RequestError>(())
-                    }
-                })
-        ).branch(
-            dptree::filter(|msg: Message| msg.text().is_some())
-                .endpoint(move |bot: Bot, msg: Message| {
-                    let handler = handler.clone();
-                    async move {
-                        debug!("Handling message from chat: {}, user: {:?}", 
-                               msg.chat.id, msg.from());
+                                // 只处理文本消息
+                                if let MessageKind::Common(common_msg) = &msg.kind {
+                                    if let MediaKind::Text(_) = &common_msg.media_kind {
+                                        if let Err(e) = handler.handle_message(&bot, &msg).await {
+                                            error!("Failed to handle message: {}", e);
 
-                        // 只处理文本消息
-                        if let MessageKind::Common(common_msg) = &msg.kind {
-                            if let MediaKind::Text(_) = &common_msg.media_kind {
-                                if let Err(e) = handler.handle_message(&bot, &msg).await {
-                                    error!("Failed to handle message: {}", e);
-                                    
-                                    // 发送通用错误消息
-                                    let error_text = "❌ 处理消息时发生错误，请稍后重试。";
-                                    if let Err(send_err) = bot.send_message(msg.chat.id, error_text).await {
-                                        error!("Failed to send error message: {}", send_err);
+                                            // 发送通用错误消息
+                                            let error_text = "❌ 处理消息时发生错误，请稍后重试。";
+                                            if let Err(send_err) =
+                                                bot.send_message(msg.chat.id, error_text).await
+                                            {
+                                                error!(
+                                                    "Failed to send error message: {}",
+                                                    send_err
+                                                );
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
 
-                        Ok::<(), RequestError>(())
-                    }
-                })
-        ))
+                                Ok::<(), RequestError>(())
+                            }
+                        },
+                    ),
+                ),
+        )
         .enable_ctrlc_handler()
         .build()
         .dispatch()
@@ -104,9 +116,9 @@ impl BotDispatcher {
 /// 启动机器人的主函数
 pub async fn start_bot(token: &str, message_handler: MessageHandler) -> Result<()> {
     info!("🚀 Initializing Telegram Bot...");
-    
+
     let bot = Bot::new(token);
-    
+
     // 获取机器人信息
     match bot.get_me().await {
         Ok(me) => {
@@ -123,12 +135,12 @@ pub async fn start_bot(token: &str, message_handler: MessageHandler) -> Result<(
 
     // 创建并启动调度器
     let dispatcher = BotDispatcher::new(message_handler);
-    
+
     info!("🎯 Starting message processing...");
     info!("💡 Bot is now ready to receive messages!");
     info!("📝 Send a wallet transaction message to get started.");
-    
+
     dispatcher.run(bot).await?;
-    
+
     Ok(())
-} 
+}

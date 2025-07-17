@@ -1,6 +1,6 @@
-use std::env;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use std::env;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -19,40 +19,37 @@ impl Settings {
     pub fn new() -> Result<Self> {
         let telegram_bot_token = env::var("TELEGRAM_BOT_TOKEN")
             .map_err(|_| anyhow!("TELEGRAM_BOT_TOKEN must be set"))?;
-        
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "wallet_bot.db".to_string());
-        
-        let bot_name = env::var("BOT_NAME")
-            .unwrap_or_else(|_| "WalletBot".to_string());
-        
+
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "wallet_bot.db".to_string());
+
+        let bot_name = env::var("BOT_NAME").unwrap_or_else(|_| "WalletBot".to_string());
+
         let target_channel_id = env::var("TARGET_CHANNEL_ID")
             .ok()
             .and_then(|id| id.parse::<i64>().ok());
-        
+
         let max_retry_attempts = env::var("MAX_RETRY_ATTEMPTS")
             .unwrap_or_else(|_| "3".to_string())
             .parse::<u32>()
             .unwrap_or(3);
-        
+
         let processing_timeout = env::var("PROCESSING_TIMEOUT")
             .unwrap_or_else(|_| "30".to_string())
             .parse::<u64>()
             .unwrap_or(30);
-        
+
         let backup_interval = env::var("BACKUP_INTERVAL")
             .unwrap_or_else(|_| "3600".to_string())
             .parse::<u64>()
             .unwrap_or(3600);
-        
+
         let backup_retention_days = env::var("BACKUP_RETENTION_DAYS")
             .unwrap_or_else(|_| "7".to_string())
             .parse::<u32>()
             .unwrap_or(7);
-        
-        let log_level = env::var("RUST_LOG")
-            .unwrap_or_else(|_| "info".to_string());
-        
+
+        let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+
         Ok(Settings {
             telegram_bot_token,
             database_url,
@@ -65,24 +62,24 @@ impl Settings {
             log_level,
         })
     }
-    
+
     pub fn validate(&self) -> Result<()> {
         if self.telegram_bot_token.is_empty() {
             return Err(anyhow!("Telegram bot token cannot be empty"));
         }
-        
+
         if self.database_url.is_empty() {
             return Err(anyhow!("Database URL cannot be empty"));
         }
-        
+
         if self.max_retry_attempts == 0 {
             return Err(anyhow!("Max retry attempts must be greater than 0"));
         }
-        
+
         if self.processing_timeout == 0 {
             return Err(anyhow!("Processing timeout must be greater than 0"));
         }
-        
+
         Ok(())
     }
 }
@@ -101,4 +98,4 @@ impl Default for Settings {
             log_level: "info".to_string(),
         }
     }
-} 
+}

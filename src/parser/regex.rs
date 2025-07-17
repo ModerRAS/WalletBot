@@ -25,7 +25,7 @@ impl RegexPatterns {
             total_regex: Regex::new(r"#总额\s+(\d+(?:\.\d+)?)元").unwrap(),
         }
     }
-    
+
     pub fn get_instance() -> &'static Self {
         static INSTANCE: OnceLock<RegexPatterns> = OnceLock::new();
         INSTANCE.get_or_init(|| RegexPatterns::new())
@@ -36,4 +36,4 @@ impl Default for RegexPatterns {
     fn default() -> Self {
         Self::new()
     }
-} 
+}

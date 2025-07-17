@@ -1,9 +1,9 @@
-pub mod handler;
 pub mod commands;
-pub mod traits;
 pub mod dispatcher;
+pub mod handler;
+pub mod traits;
 
-pub use handler::MessageHandler;
-pub use dispatcher::start_bot;
 pub use commands::Commands;
-pub use traits::BotApi; 
+pub use dispatcher::start_bot;
+pub use handler::MessageHandler;
+pub use traits::BotApi;

@@ -1,3 +1,3 @@
 pub mod balance;
 
-pub use balance::BalanceCalculator; 
+pub use balance::BalanceCalculator;

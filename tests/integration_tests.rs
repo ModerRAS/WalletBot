@@ -391,7 +391,7 @@ async fn test_error_handling() -> Result<()> {
     for message in invalid_messages {
         let parsed = parser.parse(message);
         assert!(parsed.is_none() || !parser.is_wallet_message(message));
-        println!("✅ 正确拒绝无效消息: {}", message);
+        println!("✅ 正确拒绝无效消息: {message}");
     }
 
     println!("✅ 错误处理测试通过");
@@ -505,8 +505,8 @@ async fn test_performance() -> Result<()> {
     let db_duration = start_time.elapsed();
 
     println!("✅ 性能测试结果:");
-    println!("  - 1000次消息解析耗时: {:?}", parse_duration);
-    println!("  - 100次数据库操作耗时: {:?}", db_duration);
+    println!("  - 1000次消息解析耗时: {parse_duration:?}");
+    println!("  - 100次数据库操作耗时: {db_duration:?}");
     println!("  - 平均单次解析耗时: {:?}", parse_duration / 1000);
     println!("  - 平均单次数据库操作耗时: {:?}", db_duration / 100);
 
@@ -524,7 +524,7 @@ async fn test_concurrent_operations() -> Result<()> {
     for i in 0..10 {
         let db_clone = db.clone();
         let handle = tokio::spawn(async move {
-            let wallet_name = format!("并发测试钱包{}", i);
+            let wallet_name = format!("并发测试钱包{i}");
             db_clone
                 .get_or_create_wallet(TEST_CHAT_ID, &wallet_name)
                 .await

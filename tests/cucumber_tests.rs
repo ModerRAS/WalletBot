@@ -881,7 +881,7 @@ async fn process_message(world: &mut WalletBotWorld) {
             .get_balance(world.current_chat_id.0, &parsed.wallet_name)
             .await
             .unwrap_or(0.0);
-        let confirmation_message = format!("交易已记录，当前余额: {:.2}元", balance);
+        let confirmation_message = format!("交易已记录，当前余额: {balance:.2}元");
         let _ = world
             .bot_api
             .send_message(message.chat.id, &confirmation_message)
@@ -978,7 +978,7 @@ async fn user_has_transaction_records(world: &mut WalletBotWorld, count: i32) {
                 &world.current_user,
                 "收入",
                 i as f64,
-                &format!("交易{}", i),
+                &format!("交易{i}"),
                 &format!("tx_{}_{}", i, rand::random::<u32>()),
             )
             .await;

@@ -58,7 +58,10 @@ impl WalletBotError {
 
     /// 检查错误是否为可重试的类型
     pub fn is_retryable(&self) -> bool {
-        matches!(self, WalletBotError::Database(_) | WalletBotError::Telegram(_) | WalletBotError::Io(_))
+        matches!(
+            self,
+            WalletBotError::Database(_) | WalletBotError::Telegram(_) | WalletBotError::Io(_)
+        )
     }
 
     /// 获取错误的严重程度

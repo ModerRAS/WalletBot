@@ -2,7 +2,7 @@ use anyhow::Result;
 use log::{debug, error, info};
 use teloxide::{
     prelude::*,
-    types::{Me, MediaKind, MessageKind},
+    types::{MediaKind, MessageKind},
     utils::command::BotCommands,
     RequestError,
 };

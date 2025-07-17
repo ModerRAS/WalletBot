@@ -85,6 +85,7 @@ impl BalanceCalculator {
     }
 
     /// 智能余额计算：优先使用总额，否则计算交易余额
+    #[allow(clippy::too_many_arguments)]
     pub async fn smart_calculate_balance(
         &self,
         chat_id: i64,
@@ -151,7 +152,7 @@ impl BalanceCalculator {
     /// 检查余额是否需要调整
     pub async fn should_adjust_balance(
         &self,
-        wallet_name: &str,
+        _wallet_name: &str,
         current_total: f64,
         calculated_total: f64,
     ) -> bool {
@@ -166,8 +167,8 @@ impl BalanceCalculator {
         old_balance: f64,
         new_balance: f64,
         reason: &str,
-        message_id: Option<i64>,
-        chat_id: Option<i64>,
+        _message_id: Option<i64>,
+        _chat_id: Option<i64>,
     ) -> Result<()> {
         info!(
             "Creating balance adjustment for {}: {} -> {} ({})",

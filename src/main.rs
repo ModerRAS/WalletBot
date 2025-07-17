@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             Logger::log_operation_failure("Database", &e.to_string());
-            return Err(e.into());
+            return Err(e);
         }
     };
 

@@ -1,6 +1,6 @@
 use crate::database::models::ParsedMessage;
 use crate::parser::regex::RegexPatterns;
-use log::{debug, warn};
+use log::debug;
 
 #[derive(Clone, Debug)]
 pub struct MessageParser {
@@ -125,7 +125,7 @@ pub struct Transaction {
 impl MessageParser {
     pub fn parse_transaction(&self, text: &str) -> Result<Transaction, anyhow::Error> {
         // 简化的交易解析，适用于"收入 100 工作收入"这样的格式
-        let parts: Vec<&str> = text.trim().split_whitespace().collect();
+        let parts: Vec<&str> = text.split_whitespace().collect();
 
         if parts.len() < 3 {
             return Err(anyhow::Error::msg("Invalid transaction format"));

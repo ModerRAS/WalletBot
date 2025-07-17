@@ -1,7 +1,7 @@
-use crate::database::models::{Message, Transaction, Wallet};
+use crate::database::models::{Transaction, Wallet};
 use anyhow::Result;
 use chrono::{Datelike, Utc};
-use log::{debug, error, info};
+use log::{debug, info};
 use rusqlite::{params, Connection, Result as SqliteResult};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -83,7 +83,7 @@ impl DatabaseOperations {
 
         // 尝试获取现有钱包
         let mut stmt = conn.prepare("SELECT id, chat_id, name, current_balance, created_at, updated_at FROM wallets WHERE chat_id = ?1 AND name = ?2")?;
-        let wallet_iter = stmt.query_map(params![chat_id, name], |row| {
+        let mut wallet_iter = stmt.query_map(params![chat_id, name], |row| {
             Ok(Wallet {
                 id: Some(row.get(0)?),
                 chat_id: row.get(1)?,
@@ -94,7 +94,7 @@ impl DatabaseOperations {
             })
         })?;
 
-        for wallet in wallet_iter {
+        if let Some(wallet) = wallet_iter.next() {
             return Ok(wallet?);
         }
 
@@ -142,6 +142,7 @@ impl DatabaseOperations {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn record_transaction(
         &self,
         chat_id: i64,
@@ -202,8 +203,8 @@ impl DatabaseOperations {
         &self,
         chat_id: i64,
         wallet_name: &str,
-        month: &str,
-        year: &str,
+        _month: &str,
+        _year: &str,
     ) -> Result<f64> {
         let conn = self.conn.lock().await;
 
@@ -219,7 +220,7 @@ impl DatabaseOperations {
         let mut stmt =
             conn.prepare("SELECT id FROM messages WHERE message_id = ? AND chat_id = ?")?;
         let rows: Vec<i64> = stmt
-            .query_map(params![message_id, chat_id], |row| Ok(row.get(0)?))?
+            .query_map(params![message_id, chat_id], |row| row.get(0))?
             .collect::<SqliteResult<Vec<i64>>>()?;
 
         Ok(!rows.is_empty())
@@ -285,8 +286,8 @@ impl DatabaseOperations {
         wallet_name: &str,
         transaction_type: &str,
         amount: f64,
-        description: &str,
-        transaction_id: &str,
+        _description: &str,
+        _transaction_id: &str,
     ) -> Result<()> {
         // 确保钱包存在
         let _ = self.get_or_create_wallet(chat_id, wallet_name).await?;
@@ -328,7 +329,7 @@ impl DatabaseOperations {
         name: &str,
     ) -> Result<Wallet> {
         let mut stmt = conn.prepare("SELECT id, chat_id, name, current_balance, created_at, updated_at FROM wallets WHERE chat_id = ?1 AND name = ?2")?;
-        let wallet_iter = stmt.query_map(params![chat_id, name], |row| {
+        let mut wallet_iter = stmt.query_map(params![chat_id, name], |row| {
             Ok(Wallet {
                 id: Some(row.get(0)?),
                 chat_id: row.get(1)?,
@@ -339,7 +340,7 @@ impl DatabaseOperations {
             })
         })?;
 
-        for wallet in wallet_iter {
+        if let Some(wallet) = wallet_iter.next() {
             return Ok(wallet?);
         }
 

@@ -1,7 +1,10 @@
-use crate::error::{Result, WalletBotError};
+use crate::error::Result;
 use log::{debug, warn};
 use std::time::Duration;
 use tokio::time::sleep;
+
+#[cfg(test)]
+use crate::error::WalletBotError;
 
 pub struct RetryConfig {
     pub max_attempts: u32,
@@ -93,16 +96,16 @@ where
 #[macro_export]
 macro_rules! retry_operation {
     ($operation:expr, $name:expr) => {
-        crate::retry::retry_with_backoff(
+        $crate::retry::retry_with_backoff(
             || async { $operation },
-            crate::retry::RetryConfig::default(),
+            $crate::retry::RetryConfig::default(),
             $name,
         )
         .await
     };
 
     ($operation:expr, $name:expr, $config:expr) => {
-        crate::retry::retry_with_backoff(|| async { $operation }, $config, $name).await
+        $crate::retry::retry_with_backoff(|| async { $operation }, $config, $name).await
     };
 }
 

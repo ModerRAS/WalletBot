@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
 use cucumber::{given, then, when, World};
-use rand;
+
 use std::sync::Arc;
 use teloxide::types::{
     Chat, ChatId, MediaKind, MediaText, Message, MessageCommon, MessageId, MessageKind, User,

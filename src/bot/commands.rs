@@ -1,5 +1,5 @@
 use crate::bot::handler::MessageHandler;
-use log::{error, info};
+use log::info;
 use teloxide::{requests::Requester, types::Message, Bot, RequestError};
 
 #[derive(Clone)]

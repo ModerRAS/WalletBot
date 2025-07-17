@@ -28,7 +28,7 @@ impl RegexPatterns {
 
     pub fn get_instance() -> &'static Self {
         static INSTANCE: OnceLock<RegexPatterns> = OnceLock::new();
-        INSTANCE.get_or_init(|| RegexPatterns::new())
+        INSTANCE.get_or_init(RegexPatterns::new)
     }
 }
 

@@ -483,7 +483,7 @@ async fn test_performance() -> Result<()> {
         .await?;
 
     let start_time = std::time::Instant::now();
-    for i in 0..100 {
+    for _i in 0..100 {
         db.record_transaction(
             TEST_CHAT_ID,
             "性能测试钱包",

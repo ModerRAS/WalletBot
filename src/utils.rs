@@ -90,13 +90,13 @@ impl Validator {
 
     /// 验证金额
     pub fn is_valid_amount(amount: f64) -> bool {
-        amount >= 0.0 && amount <= 999_999_999.99 && !amount.is_nan() && !amount.is_infinite()
+        (0.0..=999_999_999.99).contains(&amount) && !amount.is_nan() && !amount.is_infinite()
     }
 
     /// 验证月份
     pub fn is_valid_month(month: &str) -> bool {
         if let Ok(m) = month.parse::<u32>() {
-            m >= 1 && m <= 12
+            (1..=12).contains(&m)
         } else {
             false
         }
@@ -105,7 +105,7 @@ impl Validator {
     /// 验证年份
     pub fn is_valid_year(year: &str) -> bool {
         if let Ok(y) = year.parse::<u32>() {
-            y >= 2000 && y <= 2100
+            (2000..=2100).contains(&y)
         } else {
             false
         }

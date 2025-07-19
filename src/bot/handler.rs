@@ -24,42 +24,79 @@ impl MessageHandler {
     }
 
     pub async fn handle_message(&self, bot: &Bot, message: &Message) -> Result<(), RequestError> {
+        // 记录接收到的消息详情，包括消息类型识别
+        debug!("📨 Received message in chat {} ({:?})", message.chat.id, message.chat.kind);
+        debug!("📄 Message ID: {}, Text: {:?}", message.id, message.text());
+        debug!("👤 From user: {:?}", message.from());
+        debug!("📝 Message link: t.me/c/{}/{}", message.chat.id.0.abs(), message.id);
+
+        // 检查消息来源类型
+        match &message.chat.kind {
+            teloxide::types::ChatKind::Public(public) => {
+                match &public.kind {
+                    teloxide::types::PublicChatKind::Channel(_) => {
+                        debug!("📢 Processing channel message");
+                    }
+                    teloxide::types::PublicChatKind::Group(_) => {
+                        debug!("👥 Processing group message");
+                    }
+                    teloxide::types::PublicChatKind::Supergroup(_) => {
+                        debug!("👥 Processing supergroup message");
+                    }
+                }
+            }
+            teloxide::types::ChatKind::Private(_) => {
+                debug!("👤 Processing private message");
+            }
+        }
+
         // 只处理文本消息
         if let Some(text) = message.text() {
-            debug!("Processing message: {text}");
+            debug!("🔄 Processing message: '{}'", text);
 
             // 检查是否是钱包相关消息
             if !self.parser.is_wallet_message(text) {
-                debug!("Not a wallet message, skipping");
                 return Ok(());
             }
 
             // 检查消息是否已经处理过
-            if self
-                .db
-                .is_message_processed(message.id.0 as i64, message.chat.id.0)
-                .await
-                .unwrap_or(false)
-            {
-                debug!("Message already processed, sending duplicate warning");
-                // 发送重复消息提示
-                let warning_text = "⚠️ 这条消息已经被处理过了，不会重复记录交易。";
-                bot.send_message(message.chat.id, warning_text).await?;
-                return Ok(());
+            debug!("🔍 Checking if message was already processed...");
+            let message_id = message.id.0 as i64;
+            let chat_id = message.chat.id.0;
+            
+            match self.db.is_message_processed(message_id, chat_id).await {
+                Ok(true) => {
+                    debug!("⚠️ Message {} already processed, skipping", message_id);
+                    // 发送重复消息提示
+                    let warning_text = "⚠️ 这条消息已经被处理过了，不会重复记录交易。";
+                    bot.send_message(message.chat.id, warning_text).await?;
+                    return Ok(());
+                }
+                Ok(false) => {
+                    debug!("✅ Message {} not processed yet, continuing", message_id);
+                }
+                Err(e) => {
+                    warn!("Failed to check message processing status: {}", e);
+                }
             }
 
             // 检查是否已经包含总额
-            if self.parser.has_total(text) {
-                debug!("Message already has total, updating balance from manual edit");
+            let has_total = self.parser.has_total(text);
+            debug!("📊 Message has_total: {}", has_total);
+            if has_total {
+                debug!("📈 Message already has total, switching to manual edit mode");
                 return self.handle_message_with_total(bot, message, text).await;
             }
 
             // 解析消息
             if let Some(parsed) = self.parser.parse(text) {
-                info!(
-                    "Parsed message: wallet={}, type={}, amount={}",
-                    parsed.wallet_name, parsed.transaction_type, parsed.amount
-                );
+                debug!("✅ Message parsed successfully");
+                debug!("   └─ Wallet: {}", parsed.wallet_name);
+                debug!("   └─ Type: {}", parsed.transaction_type);
+                debug!("   └─ Amount: {}", parsed.amount);
+                debug!("   └─ Month: {}", parsed.month);
+                debug!("   └─ Year: {}", parsed.year);
+                debug!("   └─ Total: {:?}", parsed.total_amount);
 
                 // 智能计算余额
                 match self

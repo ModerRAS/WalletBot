@@ -2,7 +2,7 @@ use anyhow::Result;
 use log::{debug, error, info};
 use teloxide::{
     prelude::*,
-    types::{MediaKind, MessageKind},
+    types::Update,
     utils::command::BotCommands,
     RequestError,
 };
@@ -40,66 +40,136 @@ impl BotDispatcher {
     pub async fn run(self, bot: Bot) -> Result<()> {
         info!("🤖 Starting WalletBot dispatcher...");
 
-        let handler = self.message_handler.clone();
+        let message_handler = self.message_handler.clone();
+        let edited_message_handler = self.message_handler.clone();
+        let channel_post_handler = self.message_handler.clone();
+        let edited_channel_post_handler = self.message_handler.clone();
         let commands = self.commands.clone();
 
         Dispatcher::builder(
             bot,
-            Update::filter_message()
-                .branch(dptree::entry().filter_command::<Command>().endpoint(
-                    move |bot: Bot, msg: Message, cmd: Command| {
-                        let commands = commands.clone();
-                        async move {
-                            debug!("Handling command: {cmd:?}");
-
-                            let command_str = match cmd {
-                                Command::Start => "/start",
-                                Command::Help => "/help",
-                                Command::Reprocess => "/reprocess",
-                                Command::Status => "/status",
-                            };
-
-                            if let Err(e) = commands.handle_command(&bot, &msg, command_str).await {
-                                error!("Failed to handle command {command_str}: {e}");
-                            }
-
-                            Ok::<(), RequestError>(())
-                        }
-                    },
-                ))
-                .branch(
-                    dptree::filter(|msg: Message| msg.text().is_some()).endpoint(
-                        move |bot: Bot, msg: Message| {
-                            let handler = handler.clone();
+            dptree::entry()
+                // 处理常规消息
+                .branch(Update::filter_message()
+                    .branch(dptree::entry().filter_command::<Command>().endpoint(
+                        move |bot: Bot, msg: Message, cmd: Command| {
+                            let commands = commands.clone();
                             async move {
-                                debug!(
-                                    "Handling message from chat: {}, user: {:?}",
-                                    msg.chat.id,
-                                    msg.from()
-                                );
+                                debug!("Handling command: {cmd:?}");
 
-                                // 只处理文本消息
-                                if let MessageKind::Common(common_msg) = &msg.kind {
-                                    if let MediaKind::Text(_) = &common_msg.media_kind {
+                                let command_str = match cmd {
+                                    Command::Start => "/start",
+                                    Command::Help => "/help",
+                                    Command::Reprocess => "/reprocess",
+                                    Command::Status => "/status",
+                                };
+
+                                if let Err(e) = commands.handle_command(&bot, &msg, command_str).await {
+                                    error!("Failed to handle command {command_str}: {e}");
+                                }
+
+                                Ok::<(), RequestError>(())
+                            }
+                        }
+                    ))
+                    .branch(
+                        dptree::filter(|msg: Message| msg.text().is_some())
+                            .endpoint(move |bot: Bot, msg: Message| {
+                                let handler = message_handler.clone();
+                                async move {
+                                    debug!(
+                                        "📨 Processing message from chat: {}, type: {:?}, user: {:?}",
+                                        msg.chat.id,
+                                        msg.chat.kind,
+                                        msg.from()
+                                    );
+
+                                    if let Some(text) = msg.text() {
+                                        debug!("📄 Message text: {}", text);
+                                        
+                                        // 处理消息
                                         if let Err(e) = handler.handle_message(&bot, &msg).await {
-                                            error!("Failed to handle message: {e}");
-
-                                            // 发送通用错误消息
-                                            let error_text = "❌ 处理消息时发生错误，请稍后重试。";
-                                            if let Err(send_err) =
-                                                bot.send_message(msg.chat.id, error_text).await
-                                            {
-                                                error!("Failed to send error message: {send_err}");
+                                            error!("❌ Failed to handle message: {e}");
+                                            
+                                            // 只在可以发送消息的聊天中发送错误
+                                            if !matches!(msg.chat.kind, teloxide::types::ChatKind::Public(_)) {
+                                                let error_text = "❌ 处理消息时出现错误，请稍后重试。";
+                                                let _ = bot.send_message(msg.chat.id, error_text).await;
                                             }
                                         }
+                                    }
+
+                                    Ok::<(), RequestError>(())
+                                }
+                            }),
+                    ))
+                // 处理编辑的消息
+                .branch(Update::filter_edited_message().branch(
+                    dptree::filter(|msg: Message| msg.text().is_some())
+                        .endpoint(move |bot: Bot, msg: Message| {
+                            let handler = edited_message_handler.clone();
+                            async move {
+                                debug!("📝 Processing edited message from chat: {}", msg.chat.id);
+                                if let Some(text) = msg.text() {
+                                    debug!("📄 Edited message text: {}", text);
+                                    
+                                    if let Err(e) = handler.handle_message(&bot, &msg).await {
+                                        error!("❌ Failed to handle edited message: {e}");
+                                        
+                                        if !matches!(msg.chat.kind, teloxide::types::ChatKind::Public(_)) {
+                                            let error_text = "❌ 处理编辑消息时出现错误。";
+                                            let _ = bot.send_message(msg.chat.id, error_text).await;
+                                        }
+                                    }
+                                }
+                                Ok::<(), RequestError>(())
+                            }
+                        }),
+                ))
+                // 处理频道帖子
+                .branch(Update::filter_channel_post().branch(
+                    dptree::filter(|post: Message| post.text().is_some())
+                        .endpoint(move |bot: Bot, post: Message| {
+                            let handler = channel_post_handler.clone();
+                            async move {
+                                debug!(
+                                    "📢 Processing channel post from channel: {}, title: {:?}",
+                                    post.chat.id,
+                                    post.chat.title()
+                                );
+
+                                if let Some(text) = post.text() {
+                                    debug!("📄 Channel post text: {}", text);
+                                    
+                                    // 处理频道帖子
+                                    if let Err(e) = handler.handle_message(&bot, &post).await {
+                                        error!("❌ Failed to handle channel post: {e}");
+                                        // 频道消息通常无法回复，所以不发送错误消息
                                     }
                                 }
 
                                 Ok::<(), RequestError>(())
                             }
-                        },
-                    ),
-                ),
+                        }),
+                ))
+                // 处理编辑的频道帖子
+                .branch(Update::filter_edited_channel_post().branch(
+                    dptree::filter(|post: Message| post.text().is_some())
+                        .endpoint(move |bot: Bot, post: Message| {
+                            let handler = edited_channel_post_handler.clone();
+                            async move {
+                                debug!("📝 Processing edited channel post from channel: {}", post.chat.id);
+                                if let Some(text) = post.text() {
+                                    debug!("📄 Edited channel post text: {}", text);
+                                    
+                                    if let Err(e) = handler.handle_message(&bot, &post).await {
+                                        error!("❌ Failed to handle edited channel post: {e}");
+                                    }
+                                }
+                                Ok::<(), RequestError>(())
+                            }
+                        }),
+                )),
         )
         .enable_ctrlc_handler()
         .build()

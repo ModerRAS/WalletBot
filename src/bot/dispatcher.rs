@@ -1,11 +1,6 @@
 use anyhow::Result;
 use log::{debug, error, info};
-use teloxide::{
-    prelude::*,
-    types::Update,
-    utils::command::BotCommands,
-    RequestError,
-};
+use teloxide::{prelude::*, types::Update, utils::command::BotCommands, RequestError};
 
 use crate::bot::commands::Commands;
 use crate::bot::handler::MessageHandler;
@@ -85,12 +80,12 @@ impl BotDispatcher {
                                     );
 
                                     if let Some(text) = msg.text() {
-                                        debug!("📄 Message text: {}", text);
-                                        
+                                        debug!("📄 Message text: {text}");
+
                                         // 处理消息
                                         if let Err(e) = handler.handle_message(&bot, &msg).await {
                                             error!("❌ Failed to handle message: {e}");
-                                            
+
                                             // 只在可以发送消息的聊天中发送错误
                                             if !matches!(msg.chat.kind, teloxide::types::ChatKind::Public(_)) {
                                                 let error_text = "❌ 处理消息时出现错误，请稍后重试。";
@@ -111,11 +106,11 @@ impl BotDispatcher {
                             async move {
                                 debug!("📝 Processing edited message from chat: {}", msg.chat.id);
                                 if let Some(text) = msg.text() {
-                                    debug!("📄 Edited message text: {}", text);
-                                    
+                                    debug!("📄 Edited message text: {text}");
+
                                     if let Err(e) = handler.handle_message(&bot, &msg).await {
                                         error!("❌ Failed to handle edited message: {e}");
-                                        
+
                                         if !matches!(msg.chat.kind, teloxide::types::ChatKind::Public(_)) {
                                             let error_text = "❌ 处理编辑消息时出现错误。";
                                             let _ = bot.send_message(msg.chat.id, error_text).await;
@@ -139,8 +134,8 @@ impl BotDispatcher {
                                 );
 
                                 if let Some(text) = post.text() {
-                                    debug!("📄 Channel post text: {}", text);
-                                    
+                                    debug!("📄 Channel post text: {text}");
+
                                     // 处理频道帖子
                                     if let Err(e) = handler.handle_message(&bot, &post).await {
                                         error!("❌ Failed to handle channel post: {e}");
@@ -160,8 +155,8 @@ impl BotDispatcher {
                             async move {
                                 debug!("📝 Processing edited channel post from channel: {}", post.chat.id);
                                 if let Some(text) = post.text() {
-                                    debug!("📄 Edited channel post text: {}", text);
-                                    
+                                    debug!("📄 Edited channel post text: {text}");
+
                                     if let Err(e) = handler.handle_message(&bot, &post).await {
                                         error!("❌ Failed to handle edited channel post: {e}");
                                     }

@@ -30,16 +30,12 @@ impl BalanceCalculator {
         debug!("   ├─ Amount: {amount}");
 
         // 获取或创建钱包
-        debug!(
-            "🗄️ Getting or creating wallet for chat {chat_id}: {wallet_name}"
-        );
+        debug!("🗄️ Getting or creating wallet for chat {chat_id}: {wallet_name}");
         let wallet = self.db.get_or_create_wallet(chat_id, wallet_name).await?;
 
         // 获取当前余额
         let current_balance = wallet.current_balance;
-        debug!(
-            "💵 Current balance for {wallet_name}: {current_balance}"
-        );
+        debug!("💵 Current balance for {wallet_name}: {current_balance}");
 
         // 计算新余额
         let new_balance = match transaction_type {
@@ -63,9 +59,7 @@ impl BalanceCalculator {
             }
         };
 
-        info!(
-            "✅ Transaction balance calculated: {wallet_name} {current_balance} → {new_balance}"
-        );
+        info!("✅ Transaction balance calculated: {wallet_name} {current_balance} → {new_balance}");
         Ok(new_balance)
     }
 
@@ -82,9 +76,7 @@ impl BalanceCalculator {
         debug!("   ├─ Total amount: {total_amount}");
 
         // 获取或创建钱包
-        debug!(
-            "🗄️ Getting wallet for manual update: {wallet_name} in chat {chat_id}"
-        );
+        debug!("🗄️ Getting wallet for manual update: {wallet_name} in chat {chat_id}");
         let wallet = self.db.get_or_create_wallet(chat_id, wallet_name).await?;
         let old_balance = wallet.current_balance;
         debug!("💵 Current balance: {old_balance} -> {total_amount}");
@@ -95,9 +87,7 @@ impl BalanceCalculator {
             .update_wallet_balance(chat_id, wallet_name, total_amount)
             .await?;
 
-        info!(
-            "✅ Manual balance update completed: {wallet_name} {old_balance} → {total_amount}"
-        );
+        info!("✅ Manual balance update completed: {wallet_name} {old_balance} → {total_amount}");
 
         Ok(BalanceUpdate {
             wallet_name: wallet_name.to_string(),
@@ -159,9 +149,7 @@ impl BalanceCalculator {
                     )
                     .await?;
 
-                debug!(
-                    "🔄 Updating wallet balance from {old_balance} to {new_balance}"
-                );
+                debug!("🔄 Updating wallet balance from {old_balance} to {new_balance}");
                 // 更新钱包余额
                 self.db
                     .update_wallet_balance(chat_id, wallet_name, new_balance)
